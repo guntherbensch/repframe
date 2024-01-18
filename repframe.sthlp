@@ -179,7 +179,7 @@ it is calculated based on {cmd:beta2_orig()} and {cmd:se2_orig()} or {cmd:beta2_
 
 {phang}
 {opt orig_in_multiverse(0/1)} is a binary indicator on whether the original analysis is included as one analysis path in the multiverse robustness test;
-default is {cmd:orig_in_multiverse(0)}. {ul:It is important to note} that, irrespective of whether the the original analysis is included
+default is {cmd:orig_in_multiverse(0)}. {ul:It is important to note} that, irrespective of whether the original analysis is included
 as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis
 in the *_orig variables, and not in the variables on the analysis paths of robustness tests. 
 
@@ -220,6 +220,11 @@ and 2 provides an alternative set of indicators; default is {cmd:indset(1)}.
 
 {p 4 8 2}
 Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}.
+
+
+{title:Also see}
+
+{p 4 8 2} Online Readme on GitHub, among others with an explanation of the required input data structure: {browse "https://github.com/guntherbensch/repframe"} 
 
 
 {title:Authors}

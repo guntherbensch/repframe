@@ -1,7 +1,7 @@
 /*
 *** PURPOSE:	
 	This Stata do-file contains the program repframe to calculate Reproducibility and Replication Framework Indicators for multiverses of replication estimates.
-	repframe requires version 14.0 of Stata or newer.
+	repframe requires version 12.0 of Stata or newer.
 
 	
 *** OUTLINE:	PART 1.  INITIATE PROGRAM REPFRAME
@@ -653,7 +653,8 @@ qui {
 	duplicates drop
 	
 	sort header
-	levelsof header, local(headerlist)  
+	levelsof header, local(headerlist) 
+	qui tab header   // added because r(r) as stored result of levelsof was only added after Stata 14 
 	local var_N = r(r)
 	levelsof outcome_str, local(headerlablist)
 	drop outcome_str
@@ -723,24 +724,24 @@ qui {
 	replace indicator = "(B2b) Pooled hypothesis test - z-statistic based on t/z-score (inverse sign for negative original results)*"    if indicator=="RF_pooledH_B"
 	
 	
-	insobs 1  // add an observation at bottom of dataset to include notes
+	set obs `=_N+1'   // backward-compatible alternative to insobs 1 in order to add an observation at bottom of dataset to include notes
 	replace indicator = "`shareosig' outcomes originally significant (`siglevelnum'% level)" if indicator==""
-	insobs 1
+	set obs `=_N+1'
 	replace indicator = "* = if across all outcomes: Share in % of statistically significant outcomes (`siglevelnum'% level); for the pooled hypothesis tests, if same direction" if indicator==""
 	if `ivarweight'==1 {
-		insobs 1
+		set obs `=_N+1'
 		replace indicator = "Note: Indicators across outcomes are derived by weighting individual outcomes in inverse proportion to their variance" if indicator==""
 	}
 	
 	if "`outputfile'"!="" {
-		export excel "`outputfile'", firstrow(variables) replace keepcellfmt
+		export excel "`outputfile'", firstrow(varlabels) replace
 	}
 	else {
 		if c(os)=="Windows" {
-			export excel "C:/Users/`c(username)'/Downloads/reproframe_indicators.csv", firstrow(variables) replace keepcellfmt 
+			export excel "C:/Users/`c(username)'/Downloads/reproframe_indicators.csv", firstrow(varlabels) replace 
 		}
 		else {
-			export excel "~/Downloads/reproframe_indicators.csv", firstrow(variables) replace keepcellfmt
+			export excel "~/Downloads/reproframe_indicators.csv", firstrow(varlabels) replace
 		}
 	}
 	

@@ -1,8 +1,25 @@
+/*
+*** PURPOSE:	
+	This Stata do-file runs multiple specifications for a multiverse analysis and stores the estimates as a dataset 
+	including information on
+		- the outcome
+		- the beta coefficient of the multiple analysis paths
+		- the related standard error (se)
+		- the various decision choices taken (beyond the outcome, if applicable), for example on the iv and the covariates
+		- additional parameters, such as the number of observations, the outcome mean, and IV-related statistics
+
+	repframe_gendata requires version 12.0 of Stata or newer.
+					
+***  AUTHOR:	Gunther Bensch, RWI - Leibniz Institute for Economic Research, gunther.bensch@rwi-essen.de
+*/	
+
+
+
+
 cap program drop repframe_gendata
 
 program define repframe_gendata
-	version 14.0
-		
+			
 	syntax
 	
 	
@@ -22,7 +39,7 @@ program define repframe_gendata
 			quietly ssc install estout, replace
 			
 	
-	*** Generate Multiverse dataset
+	*** Run multiverse analysis
 	local panel_list   iv cov1 cov2 cov3 cov4 cov5 
 	local m_max = 2*(2^5*3^1)
 	local n_max = 14		// # entries for each of the estimation results: outcome - IVest (yes/no) - beta_iqiv - se_iqiv - outcome_mean - N (outcome var) - FStat (IV) - iv - cov1 - cov2 - cov3 - cov4 - cov5 - neg_first
@@ -83,6 +100,7 @@ program define repframe_gendata
 	}
 	
 	
+	*** Create multiverse dataset
 	svmat R, names(col)
 	keep `R_matrix_col'
 	

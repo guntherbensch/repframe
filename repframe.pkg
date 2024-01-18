@@ -2,7 +2,7 @@ v 1.1
 d {bf:repframe}: A Stata package to calculate Reproducibility and Replication Framework Indicators
 d After installation, see {bf:help repframe}.
 d
-d Requires: Stata version 14 or higher.
+d Requires: Stata version 12 or higher.
 d
 d This  version: 17 Jan 2024
 d First version: 17 Jan 2024
