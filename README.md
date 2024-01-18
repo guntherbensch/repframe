@@ -4,7 +4,7 @@ This is a Stata package that calculates Reproducibility and Replication Framewor
 
 The package can be installed by executing in Stata:
 ```
-net install sensdash, from("https://raw.githubusercontent.com/guntherbensch/repframe/main") replace
+net install repframe, from("https://raw.githubusercontent.com/guntherbensch/repframe/main") replace
 ```
 
 Once installed, please see `help repframe` for the syntax and the whole range of options.
