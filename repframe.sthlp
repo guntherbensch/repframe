@@ -84,8 +84,8 @@ the value label should not begin with a number (such as "1. income").{p_end}
 {title:Description}
 
 {pstd}
-{cmd:repframe} calculates Reproducibility and Replicability Indicators across {it:outcome} to compare multiple estimates
-from analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate.{p_end}
+{cmd:repframe} produces Reproducibility and Replicability Indicators and Sensitivity Dashboards across {it:outcome} to compare estimates
+from amultiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate.{p_end}
 
 
 {marker options}{...}
