@@ -1,4 +1,4 @@
-# REPFRAME v1.1
+# REPFRAME v1.2
 
 This is a Stata package that produces Reproducibility and Replicability Indicators and Sensitivity Dashboards. These tools compare estimates from a multiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works. 
 
