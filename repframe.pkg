@@ -1,10 +1,10 @@
-v 1.1
-d {bf:repframe}: A Stata package to calculate Reproducibility and Replication Framework Indicators
+v 1.2
+d {bf:repframe}: A Stata package to produce Reproducibility and Replicability Indicators and Sensitivity Dashboards based on multiverse analyses.
 d After installation, see {bf:help repframe}.
 d
 d Requires: Stata version 12 or higher.
 d
-d This  version: 17 Jan 2024
+d This  version: 19 Jan 2024
 d First version: 17 Jan 2024
 d License: MIT
 d

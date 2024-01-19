@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1  17jan2024 Gunther Bensch}{...}
+{* *! version 1.2  19jan2024 Gunther Bensch}{...}
 {findalias asfradohelp}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "[R] help" "help help"}{...}
@@ -15,7 +15,7 @@
 {title:Title}
 
 {phang}
-{bf:repframe} {hline 2} Calculate Reproducibility and Replication Framework Indicators
+{bf:repframe} {hline 2} Produce Reproducibility and Replicability Indicators and Sensitivity Dashboards
 
 {marker syntax}{...}
 {title:Syntax}
@@ -37,14 +37,20 @@
 {synopt:{opt se_orig(varname)}}standard errors of the original beta coefficient for respective outcome{p_end}
 {synopt:{opt zscore(varname)}}{it:t}/{it:z} scores of estimates in analysis paths of robustness tests{p_end}
 {synopt:{opt zscore_orig(varname)}}{it:t}/{it:z} scores of original estimates for respective outcome{p_end}
-			
+
 {syntab:optional parameters}
-{synopt:{opt outputfile(filename)}}path of output file with Reproducibility and Replication Framework Indicators{p_end}
 {synopt:{opt siglevel(#)}}significance level{p_end}
 {synopt:{opt df(varname)}}degrees of freedom in analysis paths of robustness tests{p_end}
 {synopt:{opt df_orig(varname)}}degrees of freedom in the original study outcome{p_end}
 {synopt:{opt mean(varname)}}mean of the outcome variables in the analysis paths of robustness tests{p_end}
 {synopt:{opt mean_orig(varname)}}mean of the outcome variables in the original study{p_end}
+{synopt:{opt orig_in_multiverse(0/1)}}original analysis is part of multiverse robustness test{p_end}
+{synopt:{opt ivarweight(0/1)}}show Reproducibility and Replicability Indicators across all outcomes weighted by the inverse variance{p_end}
+
+{syntab:optional parameters related to table of Reproducibility and Replicability Indicators}
+{synopt:{opt outputtable(filename)}}path of file location for the table of Reproducibility and Replicability Indicators{p_end}
+{synopt:{opt sameunits(varname)}}indicator on whether original study and analysis paths of robustness tests use same effect size units{p_end}
+{synopt:{opt shelvedind(0/1)}}shelved Reproducibility and Replicability Indicators to be additionally shown{p_end}
 {synopt:{opt beta2(varname)}}second beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt pval2(varname)}}{it:p}-values on second estimates in analysis paths of robustness tests{p_end}
 {synopt:{opt se2(varname)}}standard errors of second beta coefficients in analysis paths of robustness tests{p_end}
@@ -53,16 +59,21 @@
 {synopt:{opt pval2_orig(varname)}}{it:p}-values on second estimates in analysis paths of robustness tests{p_end}
 {synopt:{opt se2_orig(varname)}}standard errors of second beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt zscore2_orig(varname)}}{it:t}/{it:z} scores of second beta coefficients in analysis paths of robustness tests{p_end}
-{synopt:{opt orig_in_multiverse(0/1)}}original analysis is part of multiverse robustness test{p_end}
-{synopt:{opt ivarweight(0/1)}}show Indicators across all outcomes weighted by the inverse variance{p_end}
-{synopt:{opt sameunits(varname)}}indicator on whether original study and analysis paths of robustness tests use same effect size units{p_end}
-{synopt:{opt indset(#)}}Indicator set to be shown{p_end}
+
+{syntab:optional parameters related to Sensitivity Dashboard}
+{synopt:{opt sensd(0/1)}}create Sensitivity Dashboard{p_end}
+{synopt:{opt outputgraph(filename)}}path of file location for the Sensitivity Dashboard graph{p_end}
+{synopt:{opt shorttitle_orig(string)}}short tile of original results{p_end}
+{synopt:{opt extended(0/1)}}show extended set of Reproducibility and Replicability Indicators in the dashboard{p_end}
+{synopt:{opt aggregation(0/1)}}show outcomes in the dashboard aggregated across outcomes instead of individually{p_end}
+{synopt:{opt ivF(varname)}}first-stage {it:F}-Statistics, if IV/2SLS estimations{p_end}
+{synopt:{opt signfirst(varname)}}share of first stages with wrong sign{p_end}	
 {synoptline}
 {p2colreset}{...}
 
 {p 4 6 2}
-{cmd:outcome} is the variable name of the outcome variable, which should be numeric and with value labels, 
-where the value label should not begin with a number (such as "1. income").{p_end}
+{cmd:outcome} is the variable name of the outcome variable, which should be numeric and with value labels. Note that 
+the value label should not begin with a number (such as "1. income").{p_end}
 {p 4 6 2}
 {cmd:beta({it:varname})} specifies the variable {it:varname} that includes the beta coefficients in analysis paths of robustness tests.{p_end}
 {p 4 6 2}
@@ -73,8 +84,8 @@ where the value label should not begin with a number (such as "1. income").{p_en
 {title:Description}
 
 {pstd}
-{cmd:repframe} calculates Reproducibility and Replication Framework Indicators across {it:outcome} to compare multiple estimates
-from analysis paths of robustness tests, beta({it:varname}), to the original estimate, beta_orig({it:varname}).{p_end}
+{cmd:repframe} calculates Reproducibility and Replicability Indicators across {it:outcome} to compare multiple estimates
+from analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate.{p_end}
 
 
 {marker options}{...}
@@ -115,19 +126,14 @@ if {cmd:zscore_orig()} is not specified, it is calculated based on {cmd:beta_ori
 {dlgtab:optional parameters}
 
 {phang}
-{opt outputfile(filename)} specifies the Excel {it:filename}, including full path and file format (.xls, .xlsx, or .csv, for example),
-of the output file that stores the Reproducibility and Replication Framework Indicators.
-If no {cmd:outputfile()} is defined, a file called {it:reproframe_indicators.csv} is stored in the operating system's standard /Downloads folder.
-
-{phang}
-{opt siglevel(#)} gives the significance level (e.g. 1,5,10); default is siglevel(5) (i.e. 5% level).
+{opt siglevel(#)} gives the significance level for two-sided tests (e.g. 1,5,10); default is {cmd:siglevel(5)} (i.e. 5% level).
 
 {phang}			
-{opt df(varname)} gives the degrees of freedom in analysis paths of robustness tests; if {cmd:df()} is not specified,
+{opt df(varname)} specifies the variable {it:varname} that includes the degrees of freedom in analysis paths of robustness tests; if {cmd:df()} is not specified,
 an approximately normal distribution is assumed.
 
 {phang}
-{opt df_orig(varname)} gives the degrees of freedom in the original study outcome; if {cmd:df_orig()} is not specified,
+{opt df_orig(varname)} specifies the variable {it:varname} that includes the degrees of freedom in the original study outcome; if {cmd:df_orig()} is not specified,
 an approximately normal distribution is assumed.
 
 {phang}
@@ -137,6 +143,34 @@ ideally being the baseline mean in the control group.
 {phang}
 {opt mean_orig(varname)} specifies the variable {it:varname} that includes the mean of the outcome variables in the original study,
 ideally being the baseline mean in the control group; if {cmd:mean_orig()} is not specified, it is assumed to be equal to {cmd:mean()}.
+
+{phang}
+{opt orig_in_multiverse(0/1)} is a binary indicator on whether the original analysis is included as one analysis path in the multiverse robustness test
+(yes=1, no=0); default is {cmd:orig_in_multiverse(0)}. This choice affects the variation indicators among the Reproducibility and Replicability Indicators.
+{ul:It is important to note} that, irrespective of whether the original analysis is included
+as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis
+in the *_orig variables, and not in the variables on the analysis paths of robustness tests. 
+
+{phang}
+{opt ivarweight(0/1)} is a binary indicator on whether to show Reproducibility and Replicability Indicators across all outcomes weighted by the inverse variance (yes=1, no=0);
+default is {cmd:ivarweight(0)}. This option requires that the options {cmd:mean(varname)} and {cmd:mean_orig(varname)} are also defined.
+
+			
+{dlgtab:optional parameters related to table of Reproducibility and Replicability Indicators}
+
+{phang}
+{opt outputtable(filename)} specifies the {it:filename} of the output table that stores the Reproducibility and Replicability Indicators, 
+including full path of file location and file format (.xls, .xlsx, or .csv, for example).
+If no {cmd:outputtable()} is defined, a file called {it:reproframe_indicators.csv} is stored in the operating system's standard /Downloads folder.
+
+{phang}
+{opt sameunits(varname)} specifies the variable {it:varname} that contains for each and every observation a binary indicator
+on whether the original study and analysis paths of robustness tests use same effect size units ({it:varname}==1)
+or not ({it:varname}==0); default is that {it:varname} is assumed to be always equal to one.
+
+{phang}
+{opt shelvedind(0/1)} is a binary indicator on whether to also show shelved indicators from among the indicators 
+proposed in a previous version of Dreber and Johannesson (2023) (yes=1, no=0); default is {cmd:shelvedind(0)}. 
 
 {phang}
 {opt beta2(varname)} specifies the variable {it:varname} that includes the second beta coefficients in analysis paths of robustness tests,
@@ -177,24 +211,37 @@ it is calculated based on {cmd:beta2_orig()} and {cmd:pval2_orig()} or {cmd:beta
 for the respective outcome, if such a second original estimate exists; if {cmd:zscore2_orig()} is not specified,
 it is calculated based on {cmd:beta2_orig()} and {cmd:se2_orig()} or {cmd:beta2_orig()} and {cmd:pval2_orig()}.
 
-{phang}
-{opt orig_in_multiverse(0/1)} is a binary indicator on whether the original analysis is included as one analysis path in the multiverse robustness test;
-default is {cmd:orig_in_multiverse(0)}. {ul:It is important to note} that, irrespective of whether the original analysis is included
-as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis
-in the *_orig variables, and not in the variables on the analysis paths of robustness tests. 
+
+{dlgtab:optional parameters related to Sensitivity Dashboard}
 
 {phang}
-{opt ivarweight(0/1)} is a binary indicator on whether to show Indicators across all outcomes weighted by the inverse variance (yes=1, no=0);
-default is {cmd:ivarweight(0)}. This option requires that the options {cmd:mean(varname)} and {cmd:mean_orig(varname)} are also defined.
+{opt sensd(0/1)}} is a binary indicator on whether to create the Sensitivity Dashboard (yes=1, no=0);
+default is {cmd:sensd(1)}.
 
 {phang}
-{opt sameunits(varname)} specifies the variable {it:varname} that contains for each and every observation a binary indicator
-on whether the original study and analysis paths of robustness tests use same effect size units ({it:varname}==1)
-or not ({it:varname}==0); default is that {it:varname} is assumed to be always equal to one.
+{opt outputgraph(filename)} specifies the {it:filename} of the output graph that stores the Sensitivity Dashboard graph, 
+including full path of file location and file format.
+If no {cmd:outputgraph()} is defined, a file called {it:sensitivity_dashboard.emf} is stored in the operating system's standard /Downloads folder.
 
 {phang}
-{opt indset(#)} defines the Indicator set to be shown, where 1 refers to the original set that should generally be used,
-and 2 provides an alternative set of indicators; default is {cmd:indset(1)}.	
+{opt shorttitle_orig(string)} provides a short title for the original results, for example "[first letters of original authors] (year)";
+default is {cmd shorttitle_orig("original estimate")}.
+
+{phang}
+{opt extended(0/1)} is a binary indicator on whether to show the extended set of Reproducibility and Replicability Indicators in the dashboard (yes=1, no=0);
+default is {cmd:extended(0)}.
+
+{phang}
+{opt aggregation(0/1)} is a binary indicator on whether to show outcomes in the dashboard individually (=0) or aggregated across outcomes (=1);
+default is {cmd:aggregation(0)}.
+
+{phang}
+{opt ivF(varname)} specifies the variable {it:varname} that includes the first-stage {it:F}-Statistics,
+if estimates are based on IV/2SLS estimations.
+
+{phang}
+{opt signfirst(varname)} specifies the (uniform) variable {it:varname} that includes the share of first stages with wrong sign in a range between 0 and 1,
+if IV/2SLS estimations (cf. Angrist and Kolesár (2024)). This option should only be used if the share is identical for all outcomes.	
 
 
 {marker examples}{...}
@@ -204,27 +251,35 @@ and 2 provides an alternative set of indicators; default is {cmd:indset(1)}.
 {bf:Data preparation}
 
 {p 8 12}{stata "use http://fmwww.bc.edu/ec-p/data/hayashi/griliches76.dta" : . use http://fmwww.bc.edu/ec-p/data/hayashi/griliches76.dta}{p_end}
-{p 8 12}(Wages of Very Young Men, Zvi Griliches, J.Pol.Ec. 1976)
+{p 8 12}(Wages of Very Young Men, Zvi Griliches, J.Pol.Ec. 1976){p_end}
 
-{p 8 12}({stata "repframe_gendata":{it:click to generate multiverse dataset}})
+{p 8 12}({stata "repframe_gendata":{it:click to generate multiverse dataset}}){p_end}
 
 {phang}	
-{bf:Basic Reproducibility and Replication Framework Indicators using beta and se information}
+{bf:Basic Reproducibility and Replicability Indicators using beta and se information}
+
+{p 8 12}{stata "repframe outcome, beta(beta_iqiv) beta_orig(beta_iqiv_orig)  se(se_iqiv) se_orig(se_iqiv_orig) sensd(0)" : . repframe outcome, beta(beta_iqiv) beta_orig(beta_iqiv_orig)  se(se_iqiv) se_orig(se_iqiv_orig) sensd(0)}{p_end}
+
+{p 8 12}{it:[note that this example requires that the output table can be stored in the operating system's standard /Downloads folder. If this does not work, specify the file location for the output table with the option {cmd:outputtable({it:filename})}.]}{p_end}
+
+{phang}	
+{bf:Same output, now including the Sensitivity Dashboard}
 
 {p 8 12}{stata "repframe outcome, beta(beta_iqiv) beta_orig(beta_iqiv_orig)  se(se_iqiv) se_orig(se_iqiv_orig)" : . repframe outcome, beta(beta_iqiv) beta_orig(beta_iqiv_orig)  se(se_iqiv) se_orig(se_iqiv_orig)}{p_end}
 
-{p 8 12}{it:[note that this example requires that the output file can be stored in the operating system's standard /Downloads folder. If this does not work, specify the output file with the option {cmd:outputfile({it:filename})}.]}{p_end}
+{p 8 12}{it:[note that this example similarly requires that the output graph can be stored in the operating system's standard /Downloads folder. If this does not work, specify the file location for the output graph with the option {cmd:outputgraph({it:filename})}.]}{p_end}
 
 
 {title:References}
 
 {p 4 8 2}
-Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}.
-
+Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}.{p_end}
+{p 4 8 2}
+Dreber, A. & Johanneson, M. (2023). A Framework for Evaluating Reproducibility and Replicability in Economics. Available at SSRN: {browse "https://ssrn.com/abstract=4458153"} or {browse "http://dx.doi.org/10.2139/ssrn.4458153"}.{p_end}
 
 {title:Also see}
 
-{p 4 8 2} Online Readme on GitHub, among others with an explanation of the required input data structure: {browse "https://github.com/guntherbensch/repframe"} 
+{p 4 8 2} Online Readme on GitHub, among others with an explanation of the required input data structure: {browse "https://github.com/guntherbensch/repframe"}{p_end}
 
 
 {title:Authors}
