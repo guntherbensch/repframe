@@ -1,6 +1,6 @@
 # REPFRAME v1.1
 
-This is a Stata package that calculates Reproducibility and Replication Framework Indicators for multiverses of replication estimates. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works. 
+This is a Stata package that produces Reproducibility and Replicability Indicators and Sensitivity Dashboards. These tools compare estimates from a multiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works. 
 
 The package can be installed by executing in Stata:
 ```
@@ -12,7 +12,7 @@ Once installed, please see `help repframe` for the syntax and the whole range of
 
 ## Required input data structure
 
-The data needs to be in a specific format for repframe to be able to calculate the Indicators. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness analysis. 
+The data needs to be in a specific format for repframe to be able to calculate the Indicators and Dashboards. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness test. 
 In the below toy example, two alternative choices are assessed for one analytical decision (*outcome*), and three alternative choices are assessed for two other analytical decision (*covariates* and *sample*). This gives a multiverse of 3^2*2^1 = 18 analysis paths, if all combinations are to be considered. The number of observations is therefore 18 in this example.
 
 For each observation, the minimum requirement is that `beta` and `beta_orig` are defined together with `se` and `se_orig`. As an alternative to the standard error information, information on *p*-values (`pval` and `pval_orig`) or on the *t*/*z*-score (`zscore` and `zscore_orig`) may be proveided.  
