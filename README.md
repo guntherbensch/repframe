@@ -13,13 +13,14 @@ Once installed, please see `help repframe` for the syntax and the whole range of
 ## Required input data structure
 
 The data needs to be in a specific format for repframe to be able to calculate the Indicators and Dashboards. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness test. 
-In the below toy example, two alternative choices are assessed for one analytical decision (*outcome*), and three alternative choices are assessed for two other analytical decision (*covariates* and *sample*). This gives a multiverse of 3^2*2^1 = 18 analysis paths, if all combinations are to be considered. The number of observations is therefore 18 in this example.
+In the below toy example with only one main outcome, two alternative choices are assessed for one analytical decision (*outcome_adjustment*), and three alternative choices are assessed for two other analytical decision (*covariates* and *sample*). This gives a multiverse of 3^2*2^1 = 18 analysis paths, if all combinations are to be considered. The number of observations is therefore 18 in this example.
 
-For each observation, the minimum requirement is that the variables `beta` and `beta_orig` are defined together with `se` and `se_orig`. As an alternative to the standard error information, information on *p*-values (`pval` and `pval_orig`) or on the *t*/*z*-score (`zscore` and `zscore_orig`) may be proveided.  
+For each observation, the minimum requirement is that the variables `outcome`, `beta` and `beta_orig` are defined together with `se` and `se_orig`. As an alternative to the standard error information, information on *p*-values (`pval` and `pval_orig`) or on the *t*/*z*-score (`zscore` and `zscore_orig`) may be proveided.  
 
-It is important to note that, irrespective of whether the original analysis is included as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis in the variables ending with `_orig`.
+It is important to note that, irrespective of whether the original analysis is included as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis in the variables ending with `_orig`. Also note that the values of `outcome` should be numbered consecutively from 1 on and that the value labels should not begin with a number (such as "1. income").
 
-<img width="500" alt="toy example of repframe multiverse input data structure" src="https://github.com/guntherbensch/repframe/assets/128997073/a7856668-c22b-4783-a2a4-7b1aea2d3c8b">
+
+<img width="800" alt="toy example of repframe multiverse input data structure" src="https://github.com/guntherbensch/repframe/assets/128997073/8f208502-ca79-4378-8d20-b52184db07da">
 
 
 ## Output data
