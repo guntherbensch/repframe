@@ -1,3 +1,3 @@
-v 1.2
+v 1.3
 d Gunther Bensch, RWI
 p repframe Stata package to to produce Reproducibility and Replicability Indicators and Sensitivity Dashboards based on multiverse analyses
