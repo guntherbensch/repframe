@@ -1,3 +1,6 @@
+*! version 1.3  22jan2024 Gunther Bensch
+local repframe_vs  "version 1.3  22jan2024"
+
 /*
 *** PURPOSE:	
 	This Stata do-file contains the program repframe to produce Reproducibility and Replicability Indicators and Sensitivity Dashboards based on multiverse analyses.
@@ -46,10 +49,11 @@ beta(varname numeric) beta_orig(varname numeric) shortref(string)
 
 qui {
 	
-	tempfile inputdata   // instead of preserve given that different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
+*** preserve initial dataset 
+	tempfile inputdata   // instead of command *preserve* because *repframe* would require multiple *preserve* as different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
 	save `inputdata'
 	
-	**  syntax components that have to be defined early on
+***  syntax components that have to be defined early on
 	if "`sensd'"=="" {
 		local sensd = 1
 	}
@@ -57,6 +61,7 @@ qui {
 		local studypooling = 0 
 	}
 	
+*** install user-written packages, only required for the Sensibility Dashboard
 	if `sensd'==1 {
 	
 	*** Install packages from SSC
@@ -93,9 +98,11 @@ qui {
 	// if studypooling==1: the repframe command creates datasets as input to studypooling==1 that are already tailored to the set of required variables
 		
 	
-	
+
+
+
 ********************************************************************************
-*****  PART 2  AUXILIARY VARIABLE GENERATION
+*****  PART 2  AUXILIARY VARIABLE GENERATION AND LOCAL DEFINITION
 ********************************************************************************			
 
 ***  syntax components when indicators are to be pooled across studies (studypooling==1)
@@ -185,6 +192,7 @@ qui {
 		}
 
 		if "`se'"=="" & "`zscore'"=="" & "`df'"=="" {
+			noi dis "{red: You specified {opt pval()} and {opt pval_orig()}. Note that it is assumed that these p-values are derived from two-sided t-tests.}"
 			gen     se_i   	= abs(`beta'/invnormal(`pval'/2))	
 		}
 		if "`se'"=="" & "`zscore'"=="" & "`df'"!="" {
@@ -539,7 +547,7 @@ qui {
 		capture gen beta2_dir_i = .
 
 	
-*** additional variable generation, e.g. on the effect direction and the relative effect size based on the raw dataset	
+*** additional variable generation, e.g. on the effect direction and the relative effect size based on the raw data	
 		gen beta_rel_i       = `beta'/mean_j*100
 		gen se_rel_i          = se_i/mean_j
 		
@@ -559,9 +567,9 @@ qui {
 		qui tab `varlist' 
 		local N_outcomes = `r(r)'
 		bysort `varlist': gen x_n_j = _n
-		gen x_pval_osig_d_j = (pval_orig_j<0.`sigdigits') if x_n_j==1
+		gen x_pval_osig_d_j = (pval_orig_j<=0.`sigdigits') if x_n_j==1
 		egen x_pval_osig_d  = total(x_pval_osig_d_j)    
-		gen x_pval_onsig_d_j = (pval_orig_j>=0.`sigdigits') if x_n_j==1
+		gen x_pval_onsig_d_j = (pval_orig_j>0.`sigdigits') if x_n_j==1
 		egen x_pval_onsig_d  = total(x_pval_onsig_d_j)
 		local osig_out_N  = x_pval_osig_d
 		local onsig_out_N = x_pval_onsig_d
@@ -572,7 +580,7 @@ qui {
 			local shareonsig_out "`: display x_pval_onsig_d  "`=char(47)'"  `N_outcomes' '"
 
 			
-*** information presented in figure note on the number of analysis paths that are captured by the dashboard 
+*** information presented in figure note of the Sensitivity Dashboard on the number of analysis paths that are captured by the dashboard 
 			qui tab `varlist' 
 			local N_outcomes = `r(r)'
 			
@@ -603,7 +611,7 @@ qui {
 	}
 	
 	if `studypooling'==1 {
-**information on share of outcomes etc for `studypooling'==1
+*** information on share of outcomes etc for `studypooling'==1
 		** studies
 		foreach origs in osig onsig {
 			egen x_`origs'_stud_N2 = count(header) if header=="_All_outcomes_`origs'"
@@ -644,30 +652,31 @@ qui {
 ********************************************************************************
 *****  PART 3  INDICATOR DEFINITIONS BY OUTCOME
 ********************************************************************************
+	// for verbal description of indicators, see labels below under Part 5.C
 
 	if `studypooling'==0 {
-		** 1. Statistical significance indicator
-						   gen x_RF_stat_sig_i = (pval_i<0.`sigdigits' ///
-												  & beta_dir_i==beta_orig_dir_j)*100	if pval_orig_j<0.`sigdigits'  & beta2_i==.
-					   replace x_RF_stat_sig_i = (pval_i>=0.`sigdigits')*100			if pval_orig_j>=0.`sigdigits' & beta2_i==.
+		** 1. Significance agreement
+						   gen x_RF_stat_sig_i = (pval_i<=0.`sigdigits' ///
+												  & beta_dir_i==beta_orig_dir_j)*100	if pval_orig_j<=0.`sigdigits'  & beta2_i==.
+					   replace x_RF_stat_sig_i = (pval_i>0.`sigdigits')*100			if pval_orig_j>0.`sigdigits' & beta2_i==.
 					   
 
-					   replace x_RF_stat_sig_i = (pval_i<0.`sigdigits' ///
+					   replace x_RF_stat_sig_i = (pval_i<=0.`sigdigits' ///
 												  & beta_dir_i==beta_orig_dir_j ///
-												  & pval2_i<0.`sigdigits' ///
-												  & beta2_dir_i==beta_orig_dir_j)*100	if pval_orig_j<0.`sigdigits' & beta2_i!=.
+												  & pval2_i<=0.`sigdigits' ///
+												  & beta2_dir_i==beta_orig_dir_j)*100	if pval_orig_j<=0.`sigdigits' & beta2_i!=.
 						   // if two coefficients and if the original results was significant, both coefficients need to be significant in the original direction  
-					   replace x_RF_stat_sig_i = (pval_i>=0.`sigdigits' | (pval2_i>=0.`sigdigits' & pval2_i<.))*100	if pval_orig_j>=0.`sigdigits' & beta2_i!=.  
+					   replace x_RF_stat_sig_i = (pval_i>0.`sigdigits' | (pval2_i>0.`sigdigits' & pval2_i<.))*100	if pval_orig_j>0.`sigdigits' & beta2_i!=.  
 						   // if two coefficients and if the original result was a null result, at least one of the two coefficients need to be insignificant    
 					   
 		bysort `varlist': egen   RF_stat_sig_j = mean(x_RF_stat_sig_i) 						  	 
 				
 					
-		** 1+. Statistical significance indicator (opposite direction)
+		** 1+. Significance agreement (opposite direction)
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 			// only for beta2_i==.
-						   gen x_RF_stat_sig_ndir_i	= (pval_i<0.`sigdigits' ///
-												  & beta_dir_i!=beta_orig_dir_j)*100	if pval_orig_j<0.`sigdigits' & beta2_i==.
+						   gen x_RF_stat_sig_ndir_i	= (pval_i<=0.`sigdigits' ///
+												  & beta_dir_i!=beta_orig_dir_j)*100	if pval_orig_j<=0.`sigdigits' & beta2_i==.
 										
 		bysort `varlist': egen   RF_stat_sig_ndir_j	= mean(x_RF_stat_sig_ndir_i) 
 		
@@ -675,18 +684,18 @@ qui {
 		** 2. Relative effect size 
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 			// only for sameunits_i==1 & beta2_orig_j==.
-		bysort `varlist': egen x_RF_relES_j = mean(`beta')   							if (pval_orig_j<0.`sigdigits') & sameunits_i==1 & beta2_orig_j==.
+		bysort `varlist': egen x_RF_relES_j = mean(`beta')   							if (pval_orig_j<=0.`sigdigits') & sameunits_i==1 & beta2_orig_j==.
 						   gen   RF_relES_j = x_RF_relES_j/beta_orig_j
 
 			
-		** 2+. Relative effect size - deviation of median estimate as % of original result, if same direction
+		** 2+. Relative effect size - alternative definition
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 			// + only for analysis paths of reproducability or replicability analyses reported as statistically significant at the 0.`sigdigits' level
-		bysort `varlist': egen x_RF_relES2_j2 	= median(`beta')	 					if pval_i<0.`sigdigits' & beta_dir_i==beta_orig_dir_j & pval_orig_j<0.`sigdigits'						
+		bysort `varlist': egen x_RF_relES2_j2 	= median(`beta')	 					if pval_i<=0.`sigdigits' & beta_dir_i==beta_orig_dir_j & pval_orig_j<=0.`sigdigits'						
 						   gen x_RF_relES2_j 	= x_RF_relES2_j2/beta_orig_j 
 						   gen   RF_relES2_j 	= ((x_RF_relES2_j) - 1)*100
 
-		** 2b+. if aggregated: Relative effect size - s.d. of deviation of median estimate as % of original result, if same direction
+		** 2b+. Relative effect size across studies (if aggregated) - alternative definition
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 						   gen RF_relES2sd_j = .   // is calculated below once data is aggregated to outcome level
 						   
@@ -694,7 +703,7 @@ qui {
 		** 3. Relative t/z-value
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 						   gen x_RF_reltz_i = zscore_i/zscore_orig_j
-		bysort `varlist': egen   RF_reltz_j = mean(x_RF_reltz_i)   						if pval_orig_j<0.`sigdigits'
+		bysort `varlist': egen   RF_reltz_j = mean(x_RF_reltz_i)   						if pval_orig_j<=0.`sigdigits'
 		
 
 		*** preparation for Variation Indicators 4 and 5: add original estimate as additional observation if included as one analysis path of reproducability or replicability analysis
@@ -709,7 +718,7 @@ qui {
 			replace zscore_i    = zscore_orig_j  if add_orig==1
 			
 			bysort `varlist': egen x_RF_relES2_j3 = mean(x_RF_relES2_j2)
-			replace x_RF_relES2_j2 = x_RF_relES2_j3 if add_orig==1 & pval_orig_j<0.`sigdigits'   // set x_RF_relES2_j2 for original results with pval_orig_j(=pval_i for add_orig==1)<0.`sigdigits'
+			replace x_RF_relES2_j2 = x_RF_relES2_j3 if add_orig==1 & pval_orig_j<=0.`sigdigits'   // set x_RF_relES2_j2 for original results with pval_orig_j(=pval_i for add_orig==1)<=0.`sigdigits'
 			// other *_j variables do not need to be adjusted, as they are already generated by the expand command
 		}
 		
@@ -720,11 +729,11 @@ qui {
 						   gen   RF_relVAR_ES_j = x_RF_relVAR_ES_j/se_orig_j        
 		
 		
-		** A4+. Variation indicator - mean abs. deviation of estimates from median estimate, as % of original result
+		** A4+. Variation indicator: effect sizes - alternative definition
 			// only for original results reported as statistically significant at the 0.`sigdigits' level
 			// + only for analysis paths of reproducability or replicability analyses reported as statistically significant at the 0.`sigdigits' level
 						   gen x_RF_relVAR_ES2_i = abs(`beta'-x_RF_relES2_j2) 	    	
-		bysort `varlist': egen x_RF_relVAR_ES2_j = mean(x_RF_relVAR_ES2_i)     			if pval_i<0.`sigdigits' & beta_dir_i==beta_orig_dir_j & pval_orig_j<0.`sigdigits'
+		bysort `varlist': egen x_RF_relVAR_ES2_j = mean(x_RF_relVAR_ES2_i)     			if pval_i<=0.`sigdigits' & beta_dir_i==beta_orig_dir_j & pval_orig_j<=0.`sigdigits'
 						   gen   RF_relVAR_ES2_j = (x_RF_relVAR_ES2_j/abs(beta_orig_j))*100
 		
 		
@@ -732,8 +741,8 @@ qui {
 		bysort `varlist': egen   RF_relVAR_tz_j = sd(zscore_i)	
 
 		
-		** A5+. Variation indicator - mean abs. deviation of p-values of insig. reproducability or replicability tests from original p-value		
-						  gen x_RF_stat_insig_i  = abs(pval_i-pval_orig_j)				if pval_i>=0.`sigdigits'
+		** A5+. Variation indicator: stat. significance - alternative definition
+						  gen x_RF_stat_insig_i  = abs(pval_i-pval_orig_j)				if pval_i>0.`sigdigits'
 		bysort `varlist': egen  RF_stat_insig_j  = mean(x_RF_stat_insig_i)
 		
 		
@@ -777,21 +786,21 @@ qui {
 			** column 2
 			clonevar d_pval_insigrep_j = RF_stat_insig_j // corresponds completely to RF_stat_insig_j
 			
-							   gen x_b_op`sigdigits'_insigrep_i  = (abs(`beta')<=beta_abs_orig_p`sigdigits'_j)*100	if pval_i>=0.`sigdigits'		// multiples of 0.1 cannot be held exactly in binary in Stata -> shares converted to range from 1/100, not from 0.01 to 1.00
+							   gen x_b_op`sigdigits'_insigrep_i  = (abs(`beta')<=beta_abs_orig_p`sigdigits'_j)*100	if pval_i>0.`sigdigits'		// multiples of 0.1 cannot be held exactly in binary in Stata -> shares converted to range from 1/100, not from 0.01 to 1.00
 			bysort `varlist': egen   b_op`sigdigits'_insigrep_j	 = mean(x_b_op`sigdigits'_insigrep_i)
-							   gen x_se_op`sigdigits'_insigrep_i = (se_i>=se_orig_p`sigdigits'_j)*100				if pval_i>=0.`sigdigits'
+							   gen x_se_op`sigdigits'_insigrep_i = (se_i>=se_orig_p`sigdigits'_j)*100				if pval_i>0.`sigdigits'
 			bysort `varlist': egen   se_op`sigdigits'_insigrep_j = mean(x_se_op`sigdigits'_insigrep_i)
 
 			
 			** column 3
-							   gen x_sig`sigdigits'ndir_i		= (pval_i<0.`sigdigits' & beta_dir_i!=beta_orig_dir_j)*100
-																		// corresponds to x_RF_stat_sig_ndir_i [...], here calculated also for pval_orig_j>=0.`sigdigits'
+							   gen x_sig`sigdigits'ndir_i		= (pval_i<=0.`sigdigits' & beta_dir_i!=beta_orig_dir_j)*100
+																		// corresponds to x_RF_stat_sig_ndir_i [...], here calculated also for pval_orig_j>0.`sigdigits'
 			bysort `varlist': egen   sig`sigdigits'ndir_j      	= mean(x_sig`sigdigits'ndir_i) 
 					
 			
 			** column 4
-							   gen x_sig`sigdigits'dir_i		= (pval_i<0.`sigdigits' & beta_dir_i==beta_orig_dir_j)*100
-																		// corresponds to RF_stat_sig_i [...] if (pval_orig_j<0.`sigdigits'), here calculated also for pval_orig_j>=0.`sigdigits'
+							   gen x_sig`sigdigits'dir_i		= (pval_i<=0.`sigdigits' & beta_dir_i==beta_orig_dir_j)*100
+																		// corresponds to RF_stat_sig_i [...] if (pval_orig_j<=0.`sigdigits'), here calculated also for pval_orig_j>0.`sigdigits'
 			bysort `varlist': egen   sig`sigdigits'dir_j    	= mean(x_sig`sigdigits'dir_i)    			
 
 			if "$tFinclude"=="1" {
@@ -804,9 +813,9 @@ qui {
 				bysort `varlist': egen   sig05dir_j  			= mean(x_sig05dir_i)
 			}
 			
-							   gen x_b_up`sigdigits'_sig`sigdigits'rep_i  = (abs(`beta')>beta_abs_orig_p`sigdigits'_j)*100	if beta_dir_i==beta_orig_dir_j & pval_i<0.`sigdigits'
+							   gen x_b_up`sigdigits'_sig`sigdigits'rep_i  = (abs(`beta')>beta_abs_orig_p`sigdigits'_j)*100	if beta_dir_i==beta_orig_dir_j & pval_i<=0.`sigdigits'
 			bysort `varlist': egen   b_up`sigdigits'_sig`sigdigits'rep_j  = mean(x_b_up`sigdigits'_sig`sigdigits'rep_i)
-							   gen x_se_up`sigdigits'_sig`sigdigits'rep_i = (se_i<se_orig_p`sigdigits'_j)*100				if beta_dir_i==beta_orig_dir_j & pval_i<0.`sigdigits'
+							   gen x_se_up`sigdigits'_sig`sigdigits'rep_i = (se_i<se_orig_p`sigdigits'_j)*100				if beta_dir_i==beta_orig_dir_j & pval_i<=0.`sigdigits'
 			bysort `varlist': egen   se_up`sigdigits'_sig`sigdigits'rep_j = mean(x_se_up`sigdigits'_sig`sigdigits'rep_i)
 
 			
@@ -829,7 +838,7 @@ qui {
 		}
 	
 
-*** Collapse indicator values to one obs per outcome
+*** collapse indicator values to one observation per outcome
 		drop x_* 
 		ds RF_stat_sig_j - `collapselast'   
 		foreach var in `r(varlist)' {
@@ -849,7 +858,7 @@ qui {
 	}	
 	
 	if `studypooling'==1 {	
-		drop beta beta_orig se_orig se  // empty variables that were only required to be able to run the command
+		drop beta beta_orig se_orig se  // empty variables that were only inputted to be able to run the command
 				
 		gen     pval_orig = 0.`sigdigits' - 0.01 if header=="_All_outcomes_osig"		// originally sig outcomes have pval below 0.`sigdigits'
 		replace pval_orig = 0.`sigdigits' + 0.01 if header=="_All_outcomes_onsig"
@@ -889,27 +898,27 @@ qui {
 		
 		if `ivarweight'==1 {
 			egen x_total_weight 	   			= total(weight_j)
-			egen x_total_`sigdigits'o_weight    = total(weight_j) 			if pval_orig_j<0.`sigdigits'
-			egen x_total_insigo_weight 			= total(weight_j) 			if pval_orig_j>=0.`sigdigits'
+			egen x_total_`sigdigits'o_weight    = total(weight_j) 			if pval_orig_j<=0.`sigdigits'
+			egen x_total_insigo_weight 			= total(weight_j) 			if pval_orig_j>0.`sigdigits'
 		}
 		
 		** original indicator sig, revised indicator sig at `sigdigits'% level
 		foreach o_inds in d_pval_insigrep b_op`sigdigits'_insigrep  se_op`sigdigits'_insigrep   sig`sigdigits'dir sig`sigdigits'ndir   b_rlmd_sig`sigdigits'rep d_b_rlmd_sig`sigdigits'rep		`sig05dir' {
 			if `ivarweight'==0 {
-				egen `o_inds'_`sigdigits'o_all  = mean(`o_inds'_j) 											if pval_orig_j<0.`sigdigits'
+				egen `o_inds'_`sigdigits'o_all  = mean(`o_inds'_j) 											if pval_orig_j<=0.`sigdigits'
 			}
 			if `ivarweight'==1 {				
-				egen `o_inds'_`sigdigits'o_all  = total(`o_inds'_j*weight_j/x_total_`sigdigits'o_weight)   	if pval_orig_j<0.`sigdigits'
+				egen `o_inds'_`sigdigits'o_all  = total(`o_inds'_j*weight_j/x_total_`sigdigits'o_weight)   	if pval_orig_j<=0.`sigdigits'
 			}
 		}			
 		
 		** original indicator insig, revised indicator sig at `sigdigits'% level
 		foreach o_indi in d_pval_insigrep b_up`sigdigits'_sig`sigdigits'rep se_up`sigdigits'_sig`sigdigits'rep  sig`sigdigits'dir sig`sigdigits'ndir   b_rlmd_sig`sigdigits'rep d_b_rlmd_sig`sigdigits'rep 	`sig05dir' {
 			if `ivarweight'==0 {
-				egen `o_indi'_insigo_all = mean(`o_indi'_j) 		if pval_orig_j>=0.`sigdigits'
+				egen `o_indi'_insigo_all = mean(`o_indi'_j) 		if pval_orig_j>0.`sigdigits'
 			}
 			if `ivarweight'==1 {		
-				egen `o_indi'_insigo_all = total(`o_indi'_j*weight_j/x_total_insigo_weight) if pval_orig_j>=0.`sigdigits'
+				egen `o_indi'_insigo_all = total(`o_indi'_j*weight_j/x_total_insigo_weight) if pval_orig_j>0.`sigdigits'
 			}
 		}
 			
@@ -923,10 +932,10 @@ qui {
 			}
 		}
 		if `ivarweight'==0 {
-			egen anyrep_o`sigdigits'_all = mean(pval_orig_j<0.`sigdigits')
+			egen anyrep_o`sigdigits'_all = mean(pval_orig_j<=0.`sigdigits')
 		}
 		if `ivarweight'==1 {
-			gen  x_anyrep_o`sigdigits'_j  = (pval_orig_j<0.`sigdigits')
+			gen  x_anyrep_o`sigdigits'_j  = (pval_orig_j<=0.`sigdigits')
 			egen   anyrep_o`sigdigits'_all = total(x_anyrep_o`sigdigits'_j*weight_j/x_total_weight)	
 			
 			drop x_*
@@ -1150,8 +1159,8 @@ qui {
 		}
 		if `aggregation'==0 {
 			forval k = 1/`yset_n' {
-				replace colorname = colorname_confirm  if y==`k' & x==3 & pval_orig_j`k'<0.`sigdigits'
-				replace colorname = colorname_confirm  if y==`k' & x==1 & pval_orig_j`k'>=0.`sigdigits'
+				replace colorname = colorname_confirm  if y==`k' & x==3 & pval_orig_j`k'<=0.`sigdigits'
+				replace colorname = colorname_confirm  if y==`k' & x==1 & pval_orig_j`k'>0.`sigdigits'
 			}
 		}
 	
@@ -1315,7 +1324,7 @@ qui {
 						local y`k'x1  	`" "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f d_pval_insigrep_j`k''"  "'				
 					}
 					if share_`k'3>0 {
-						if pval_orig_j`k'<0.`sigdigits' {
+						if pval_orig_j`k'<=0.`sigdigits' {
 							if "$tFinclude"=="1" {
 								if `siglevelnum'!=5 {
 									local y`k'x3  	`" "`: display "{it:p}<0.05: "  `=sig05dir_j`k'' "% ({it:tF}: "  `=sig05tFdir_j`k'' "%)" '"    		"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`k''" b_rlmd_sig`sigdigits'rep_j`k' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " d_b_rlmd_sig`sigdigits'rep_j`k' "%)" '"  "'
@@ -1333,7 +1342,7 @@ qui {
 								}						
 							}
 						}
-						if pval_orig_j`k'>=0.`sigdigits' {
+						if pval_orig_j`k'>0.`sigdigits' {
 							if "$tFinclude"=="1" {
 								if `siglevelnum'!=5 {
 									local y`k'x3  	`" "`: display "{it:p}<0.05: "  `=sig05dir_j`k'' "% ({it:tF}: "  `=sig05tFdir_j`k'' "%)" '"  "'
@@ -1350,15 +1359,15 @@ qui {
 				}
 				else {
 					if share_`k'1>0 {
-						if pval_orig_j`k'<0.`sigdigits' {
+						if pval_orig_j`k'<=0.`sigdigits' {
 							local y`k'x1  	`" "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f d_pval_insigrep_j`k''"    "`: display "low |{&beta}|: " %3.0f b_op`sigdigits'_insigrep_j`k' "%" '"    "`: display "high se: " %3.0f se_op`sigdigits'_insigrep_j`k' "%" '" "'
 						}
-						if pval_orig_j`k'>=0.`sigdigits' {
+						if pval_orig_j`k'>0.`sigdigits' {
 							local y`k'x1  	`" "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f d_pval_insigrep_j`k''"  "'
 						}						
 					}
 					if share_`k'3>0 {
-						if pval_orig_j`k'<0.`sigdigits' {
+						if pval_orig_j`k'<=0.`sigdigits' {
 							if "$tFinclude"=="1" {
 								if `siglevelnum'!=5 {
 									local y`k'x3  	`" "`: display "{it:p}<0.05: "  `=sig05dir_j`k'' "% ({it:tF}: "  `=sig05tFdir_j`k'' "%)" '"    		"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`k''" b_rlmd_sig`sigdigits'rep_j`k' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " d_b_rlmd_sig`sigdigits'rep_j`k' "%)" '"  "'
@@ -1376,7 +1385,7 @@ qui {
 								}
 							}
 						}
-						if pval_orig_j`k'>=0.`sigdigits' {
+						if pval_orig_j`k'>0.`sigdigits' {
 							if "$tFinclude"=="1" {
 								if `siglevelnum'!=5 {
 									local y`k'x3  	`" "`: display "{it:p}<0.05: "  `=sig05dir_j`k'' "% ({it:tF}: "  `=sig05tFdir_j`k'' "%)" '"    		"`: display "high |{&beta}|: " %3.0f b_up`sigdigits'_sig`sigdigits'rep_j`k' "%" '"    "`: display "low se: " %3.0f se_up`sigdigits'_sig`sigdigits'rep_j`k' "%" '"  "'
@@ -1488,11 +1497,13 @@ qui {
 		}
 	}
 	
+
+
 	
 	
-************************************************************
+********************************************************************************
 ***  PART 5  COMPILE REPRODUCIBILITY AND REPLICABILITY INDICATORS 
-************************************************************
+********************************************************************************
 	
 	use `data_j', clear
 	if `sensd'==1 {
@@ -1518,35 +1529,35 @@ qui {
 			
 	if `ivarweight'==0 {
 		foreach RF_ind of local RF_ind_list {
-			egen RF_`RF_ind'_osig_all  = mean(RF_`RF_ind'_j) if pval_orig_j<0.`sigdigits'
-			egen RF_`RF_ind'_onsig_all = mean(RF_`RF_ind'_j) if pval_orig_j>=0.`sigdigits'
+			egen RF_`RF_ind'_osig_all  = mean(RF_`RF_ind'_j) if pval_orig_j<=0.`sigdigits'
+			egen RF_`RF_ind'_onsig_all = mean(RF_`RF_ind'_j) if pval_orig_j>0.`sigdigits'
 		}
 	
-		egen RF_relES2sd_osig_all   = sd(RF_relES2_j) if (pval_orig_j<0.`sigdigits')
+		egen RF_relES2sd_osig_all   = sd(RF_relES2_j) if (pval_orig_j<=0.`sigdigits')
 		 gen RF_relES2sd_onsig_all  = .   // only for original results reported as statistically significant at the 0.`sigdigits' level
 
 		if `shelvedind'==1 {
 			foreach approach in A B {
 				gen  x_RF_pooledH_`approach'_j2   		= 2*(1 - normal(abs(RF_pooledH_`approach'_j))) 	if (RF_pooledH_`approach'_j>=0 & beta_orig_dir_j==1) | (RF_pooledH_`approach'_j<0 & beta_orig_dir_j==0)
-				 gen  x_RF_pooledH_`approach'_j   		= (x_RF_pooledH_`approach'_j2<0.`sigdigits')*100 if x_RF_pooledH_`approach'_j2!=.
-				egen    RF_pooledH_`approach'_osig_all  = mean(x_RF_pooledH_`approach'_j) if (pval_orig_j<0.`sigdigits')
-				egen    RF_pooledH_`approach'_onsig_all = mean(x_RF_pooledH_`approach'_j) if (pval_orig_j>=0.`sigdigits') 
+				 gen  x_RF_pooledH_`approach'_j   		= (x_RF_pooledH_`approach'_j2<=0.`sigdigits')*100 if x_RF_pooledH_`approach'_j2!=.
+				egen    RF_pooledH_`approach'_osig_all  = mean(x_RF_pooledH_`approach'_j) if (pval_orig_j<=0.`sigdigits')
+				egen    RF_pooledH_`approach'_onsig_all = mean(x_RF_pooledH_`approach'_j) if (pval_orig_j>0.`sigdigits') 
 			}
 		}
 		
-		 gen  x_pval_orig_osig_all  = pval_orig_j   				if (pval_orig_j<0.`sigdigits')	
+		 gen  x_pval_orig_osig_all  = pval_orig_j   				if (pval_orig_j<=0.`sigdigits')	
 		egen    pval_orig_osig_all  = mean(x_pval_orig_osig_all) 
-		 gen  x_pval_orig_onsig_all = pval_orig_j  					if (pval_orig_j>=0.`sigdigits')	
+		 gen  x_pval_orig_onsig_all = pval_orig_j  					if (pval_orig_j>0.`sigdigits')	
 		egen    pval_orig_onsig_all = mean(x_pval_orig_onsig_all)
 	}
 		
 	if `ivarweight'==1 {
-		egen x_total_osig_weight  = total(weight_j) if (pval_orig_j<0.`sigdigits')
-		egen x_total_onsig_weight = total(weight_j) if (pval_orig_j>=0.`sigdigits')
+		egen x_total_osig_weight  = total(weight_j) if (pval_orig_j<=0.`sigdigits')
+		egen x_total_onsig_weight = total(weight_j) if (pval_orig_j>0.`sigdigits')
 			
 		foreach RF_indw of local RF_ind_list {
-			egen   RF_`RF_indw'_osig_all  = total(RF_`RF_indw'_j*weight_j/x_total_osig_weight)      if (pval_orig_j<0.`sigdigits')
-			egen   RF_`RF_indw'_onsig_all = total(RF_`RF_indw'_j*weight_j/x_total_onsig_weight)     if (pval_orig_j>=0.`sigdigits')
+			egen   RF_`RF_indw'_osig_all  = total(RF_`RF_indw'_j*weight_j/x_total_osig_weight)      if (pval_orig_j<=0.`sigdigits')
+			egen   RF_`RF_indw'_onsig_all = total(RF_`RF_indw'_j*weight_j/x_total_onsig_weight)     if (pval_orig_j>0.`sigdigits')
 		}
 			
 		gen RF_relES2sd_osig_all   = .   // formula may be added
@@ -1555,27 +1566,27 @@ qui {
 		if `shelvedind'==1 {
 			foreach approachw in A B {
 				 gen  x_RF_pooledH_`approachw'_j2   = 2*(1 - normal(abs(RF_pooledH_`approachw'_j))) 	if (RF_pooledH_`approachw'_j>=0 & beta_orig_dir_j==1) | (RF_pooledH_`approachw'_j<0 & beta_orig_dir_j==0)
-				 gen  x_RF_pooledH_`approachw'_j    = (x_RF_pooledH_`approachw'_j2<0.`sigdigits')*100 
+				 gen  x_RF_pooledH_`approachw'_j    = (x_RF_pooledH_`approachw'_j2<=0.`sigdigits')*100 
 				 
-				egen x_total_osig_weightp_`approachw'2  = total(weight_j) if x_RF_pooledH_`approachw'_j2!=.			if (pval_orig_j<0.`sigdigits')
-				egen x_total_osig_weightp_`approachw'   = mean(x_total_osig_weightp_`approachw'2)					if (pval_orig_j<0.`sigdigits')
-				egen x_RF_pooledH_`approachw'_osig_all  = total(x_RF_pooledH_`approachw'_j*weight_j)				if (pval_orig_j<0.`sigdigits')
-				 gen   RF_pooledH_`approachw'_osig_all  = x_RF_pooledH_`approachw'_osig_all/x_total_osig_weightp_`approachw'	if (pval_orig_j<0.`sigdigits')   
+				egen x_total_osig_weightp_`approachw'2  = total(weight_j) if x_RF_pooledH_`approachw'_j2!=.			if (pval_orig_j<=0.`sigdigits')
+				egen x_total_osig_weightp_`approachw'   = mean(x_total_osig_weightp_`approachw'2)					if (pval_orig_j<=0.`sigdigits')
+				egen x_RF_pooledH_`approachw'_osig_all  = total(x_RF_pooledH_`approachw'_j*weight_j)				if (pval_orig_j<=0.`sigdigits')
+				 gen   RF_pooledH_`approachw'_osig_all  = x_RF_pooledH_`approachw'_osig_all/x_total_osig_weightp_`approachw'	if (pval_orig_j<=0.`sigdigits')   
 				 
-				egen x_total_onsig_weightp_`approachw'2 = total(weight_j) if x_RF_pooledH_`approachw'_j2!=.			if (pval_orig_j>=0.`sigdigits')
-				egen x_total_onsig_weightp_`approachw'  = mean(x_total_onsig_weightp_`approachw'2)					if (pval_orig_j>=0.`sigdigits')
-				egen x_RF_pooledH_`approachw'_onsig_all = total(x_RF_pooledH_`approachw'_j*weight_j)				if (pval_orig_j>=0.`sigdigits')
-				 gen   RF_pooledH_`approachw'_onsig_all = x_RF_pooledH_`approachw'_onsig_all/x_total_onsig_weightp_`approachw'	if (pval_orig_j>=0.`sigdigits')   
+				egen x_total_onsig_weightp_`approachw'2 = total(weight_j) if x_RF_pooledH_`approachw'_j2!=.			if (pval_orig_j>0.`sigdigits')
+				egen x_total_onsig_weightp_`approachw'  = mean(x_total_onsig_weightp_`approachw'2)					if (pval_orig_j>0.`sigdigits')
+				egen x_RF_pooledH_`approachw'_onsig_all = total(x_RF_pooledH_`approachw'_j*weight_j)				if (pval_orig_j>0.`sigdigits')
+				 gen   RF_pooledH_`approachw'_onsig_all = x_RF_pooledH_`approachw'_onsig_all/x_total_onsig_weightp_`approachw'	if (pval_orig_j>0.`sigdigits')   
 			}
 		}
 		
-		egen x_total_osig_weight_orig = total(weight_orig_j)			if (pval_orig_j<0.`sigdigits')
-		gen  x_pval_orig_osig_j = pval_orig_j 							if (pval_orig_j<0.`sigdigits')
-		egen   pval_orig_osig_all = total(x_pval_orig_osig_j*weight_orig_j/x_total_osig_weight_orig) if (pval_orig_j<0.`sigdigits')
+		egen x_total_osig_weight_orig = total(weight_orig_j)			if (pval_orig_j<=0.`sigdigits')
+		gen  x_pval_orig_osig_j = pval_orig_j 							if (pval_orig_j<=0.`sigdigits')
+		egen   pval_orig_osig_all = total(x_pval_orig_osig_j*weight_orig_j/x_total_osig_weight_orig) if (pval_orig_j<=0.`sigdigits')
 			
-		egen x_total_onsig_weight_orig = total(weight_orig_j)			if (pval_orig_j>=0.`sigdigits')
-		gen  x_pval_orig_onsig_j = pval_orig_j							if (pval_orig_j>=0.`sigdigits')
-		egen   pval_orig_onsig_all = total(x_pval_orig_onsig_j*weight_orig_j/x_total_onsig_weight_orig) if (pval_orig_j>=0.`sigdigits') 
+		egen x_total_onsig_weight_orig = total(weight_orig_j)			if (pval_orig_j>0.`sigdigits')
+		gen  x_pval_orig_onsig_j = pval_orig_j							if (pval_orig_j>0.`sigdigits')
+		egen   pval_orig_onsig_all = total(x_pval_orig_onsig_j*weight_orig_j/x_total_onsig_weight_orig) if (pval_orig_j>0.`sigdigits') 
 			
 		drop weight_*
 	}
@@ -1622,7 +1633,7 @@ qui {
 		** assign unique `varlist' values to the originally stat. sig. and originally stat. insig. indicators for each study
 		decode `varlist', gen(x_studyref_str)
 		sort `varlist' pval_orig_1
-		replace `varlist' = `varlist'*2-1  if (pval_orig_1<0.`sigdigits')
+		replace `varlist' = `varlist'*2-1  if (pval_orig_1<=0.`sigdigits')
 		replace `varlist' = `varlist'*2    if (pval_orig_1>0.`sigdigits')
 		replace x_studyref_str = x_studyref_str + " " if (pval_orig_1>0.`sigdigits')   // insert a space at end to differentiate the strings
 		labmask `varlist', values(x_studyref_str)
@@ -1633,7 +1644,7 @@ qui {
 	rename *_ *
 	 
 	// drop empty rows that do not get dropped below under duplicates drop (indicators on originally sig. outcome estimates reported with originally insig. outcome estimates and vice versa)
-						 gen x_pval_orig_d_i  = (pval_orig<0.`sigdigits') if level==1
+						 gen x_pval_orig_d_i  = (pval_orig<=0.`sigdigits') if level==1
 	bysort `varlist':	egen x_pval_orig_d_j  = mean(x_pval_orig_d_i)
 	drop if level==2 &  x_pval_orig_d_j==0
 	drop if level==3 &  x_pval_orig_d_j==1
@@ -1680,18 +1691,18 @@ qui {
 		save `indicators_wide'
 		
 		
-		*** create output dataset that includes the Reproducibility and Replicability Indicators	
-			label var RF_stat_sig 	"(1) Stat. significance - % of results (in same direction if original was stat. sig.)"
+		** create output dataset that includes the Reproducibility and Replicability Indicators	
+			label var RF_stat_sig 	"(1) Significance agreement"
 			label var RF_relES 		"(2) Relative effect size"	
 			label var RF_reltz 		"(3) Relative t/z-value"
 			label var RF_relVAR_ES 	"(4) Variation indicator: effect sizes"
 			label var RF_relVAR_tz 	"(5) Variation indicator: t/z-value"
 
-			label var RF_stat_sig_ndir 	"(A1+) Stat. significance - % of results in opposite direction"
-			label var RF_relES2 		"(A2+) Relative effect size - deviation of median estimate as % of original result, if same direction"
-			label var RF_relES2sd		"(A2b+) if aggregated: Relative effect size - s.d. of deviation of median estimate as % of original result, if same direction"
-			label var RF_relVAR_ES2		"(A4+) Variation indicator - mean abs. deviation of estimates from median estimate, as % of original result"
-			label var RF_stat_insig 	"(A5+) Variation indicator - mean abs. deviation of p-values of insig. reproducability or replication tests from original p-value"
+			label var RF_stat_sig_ndir 	"(A1+) Significance agreement - alternative definition"
+			label var RF_relES2 		"(A2+) Relative effect size - alternative definition"
+			label var RF_relES2sd		"(A2b+) if aggregated: Relative effect size - alternative definition"
+			label var RF_relVAR_ES2		"(A4+) Variation indicator: effect size - alternative definition"
+			label var RF_stat_insig 	"(A5+) Variation indicator: statistical significance - alternative definition"
 			
 			clonevar d_pval_insigrep 			= RF_stat_insig
 			clonevar   b_rlmd_sig`sigdigits'rep = RF_relES2   	
@@ -1700,8 +1711,8 @@ qui {
 			merge 1:1 header using `sensdash_data', nogen 
 			order header ref
 			
-			egen x_pval_orig_sig_N   = count(pval_orig) if pval_orig<0.`sigdigits'                 & header!="_All_outcomes_osig" & header!="_All_outcomes_onsig"
-			egen x_pval_orig_insig_N = count(pval_orig) if pval_orig>=0.`sigdigits' & pval_orig<=. & header!="_All_outcomes_osig" & header!="_All_outcomes_onsig"
+			egen x_pval_orig_sig_N   = count(pval_orig) if pval_orig<=0.`sigdigits'                 & header!="_All_outcomes_osig" & header!="_All_outcomes_onsig"
+			egen x_pval_orig_insig_N = count(pval_orig) if pval_orig>0.`sigdigits' & pval_orig<=. & header!="_All_outcomes_osig" & header!="_All_outcomes_onsig"
 			egen    pval_orig_sig_N = min(x_pval_orig_sig_N)
 			replace pval_orig_sig_N = 0 if pval_orig_sig_N==.
 			label var pval_orig_sig_N  "Number of outcomes in original study with stat. sig. estimate"
@@ -1746,16 +1757,20 @@ qui {
 	foreach var in `r(varlist)' {
 		format `var' %9.2f
 		local pval_orig_l = `var' in 3 
-		if `pval_orig_l'<0.`sigdigits' {
+		if `pval_orig_l'<=0.`sigdigits' {
 			char  `var'[osig] 1  
 		}
-		if `pval_orig_l'>=0.`sigdigits' {
+		if `pval_orig_l'>0.`sigdigits' {
 			char  `var'[onsig] 1 
 		}
 	}
 	
 	capture label var _All_outcomes_osig 	"All outcomes (sig. original)"
 	capture label var _All_outcomes_onsig 	"All outcomes (insig. original)"
+	if `studypooling'==1 { 
+		capture label var _All_outcomes_osig 	"All studies (sig. original outcomes)"
+		capture label var _All_outcomes_onsig 	"All studies (insig. original outcomes)"
+	}
 	ds, has(c osig)
 	local  osiglist `r(varlist)' 
 	ds, has(c onsig)
@@ -1772,19 +1787,19 @@ qui {
 	}
 	
 	*** "labelling" of indicators in results table 	
-	replace indicator = "Original beta estimate" 											if indicator=="beta_orig" 
+	replace indicator = "Original beta estimate" 														if indicator=="beta_orig" 
 	replace indicator = "Original beta estimate, expressed as % deviation from mean of the outcome" 	if indicator=="beta_rel_orig"
-	replace indicator = "p-value of original estimate" 										if indicator=="pval_orig"
-	replace indicator = "(1) Stat. significance - % of results (in same direction if original was stat. sig.)" 	if indicator=="RF_stat_sig"
-	replace indicator = "(2) Relative effect size"				 							if indicator=="RF_relES"	
-	replace indicator = "(3) Relative t/z-value"  											if indicator=="RF_reltz"
-	replace indicator = "(4) Variation indicator: effect sizes"	 							if indicator=="RF_relVAR_ES"
-    replace indicator = "(5) Variation indicator: t/z-value" 								if indicator=="RF_relVAR_tz"
+	replace indicator = "p-value of original estimate" 													if indicator=="pval_orig"
+	replace indicator = "(1) Significance agreement" 													if indicator=="RF_stat_sig"
+	replace indicator = "(2) Relative effect size"				 										if indicator=="RF_relES"	
+	replace indicator = "(3) Relative t/z-value"  														if indicator=="RF_reltz"
+	replace indicator = "(4) Variation indicator: effect sizes"	 										if indicator=="RF_relVAR_ES"
+    replace indicator = "(5) Variation indicator: t/z-value" 											if indicator=="RF_relVAR_tz"
 
-	replace indicator = "(A1+) Stat. significance - % of results in opposite direction"  	if indicator=="RF_stat_sig_ndir"
-	replace indicator = "(A2+) Relative effect size - deviation of median estimate as % of original result, if same direction"  		if indicator=="RF_relES2"
-	replace indicator = "(A2b+) if aggregated: Relative effect size - s.d. of deviation of median estimate as % of original result, if same direction"  if indicator=="RF_relES2sd"
-	replace indicator = "(A4+) Variation indicator - mean abs. deviation of estimates from median estimate, as % of original result" 	if indicator=="RF_relVAR_ES2"
+	replace indicator = "(A1+) Significance agreement - % of results in opposite direction"  																if indicator=="RF_stat_sig_ndir"
+	replace indicator = "(A2+) Relative effect size - deviation of median estimate as % of original result, if same direction"  							if indicator=="RF_relES2"
+	replace indicator = "(A2b+) if aggregated: Relative effect size - s.d. of deviation of median estimate as % of original result, if same direction" 	 	if indicator=="RF_relES2sd"
+	replace indicator = "(A4+) Variation indicator - mean abs. deviation of estimates from median estimate, as % of original result" 						if indicator=="RF_relVAR_ES2"
 	replace indicator = "(A5+) Variation indicator - mean abs. deviation of p-values of insig. reproducability or replication tests from original p-value" 	if indicator=="RF_stat_insig"
 
 	if `shelvedind'==1 { 
@@ -1806,6 +1821,9 @@ qui {
 		set obs `=_N+1'
 		replace indicator = "Note: Indicators across outcomes are derived by weighting individual outcomes in inverse proportion to their variance" if indicator==""
 	}
+	set obs `=_N+1'
+	replace indicator = "`repframe_vs'" if indicator==""
+	
 	
 	export excel "`filepath'/reproframe_indicators_`fileidentifier'.csv", firstrow(varlabels) replace
 

@@ -1,5 +1,4 @@
 {smcl}
-{* *! version 1.3  22jan2024 Gunther Bensch}{...}
 {findalias asfradohelp}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "[R] help" "help help"}{...}
@@ -92,7 +91,8 @@ study identifier if pooling across studies is performed.
 
 {pstd}
 {cmd:repframe} produces Reproducibility and Replicability Indicators and Sensitivity Dashboards across {it:outcome} to compare estimates
-from a multiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate.{p_end}
+from a multiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate.
+The required data structure and the output data with the different indicators is described in the online Readme on GitHub: {browse "https://github.com/guntherbensch/repframe"}. {p_end}
 
 
 {marker options}{...}
