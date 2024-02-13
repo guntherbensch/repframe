@@ -36,7 +36,7 @@ The dataset including the Reproducibility and Replicability Indicators can be us
 
 The Stata datasets including the Reproducibility and Replicability Indicators of individual studies can be appended and then be fed back into the `repframe` package in order to compile Reproducibility and Replicability Indicators across studies. The following steps need to be taken:
 1. run `repframe` multiple times with multiple studies
-2. `append` the individual data outputs saved as `reproframe_data_fileidenfier'.dta`, making sure that all apply the same significance level stored under the variable name `siglevel` 
+2. `append` the individual data outputs saved as `reproframe_data_*fileidenfier*.dta`, making sure that all apply the same significance level stored under the variable name `siglevel` 
 3. run the following commands to compile a dataset with Reproducibility and Replicability Indicators across studies
 
 ```stata
