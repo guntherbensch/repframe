@@ -118,6 +118,10 @@ $$ I_{5j} = \sqrt{ \frac\{ (\sum zscore_i - \bar{zscore_i})^2}{N}} = sd(zscore_i
   
 ## Update log
 
+2024-02-13, v1.3.1:
+
+- Minor amendments to the code.
+
 2024-01-22, v1.3:
 
 - Add the option `studypooling' to calculate indicators across studies.
