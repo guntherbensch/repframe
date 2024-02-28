@@ -1,12 +1,17 @@
 /*
 *** PURPOSE:	
-	This Stata do-file runs multiple specifications for a multiverse analysis and stores the estimates as a dataset 
+	This Stata do-file exemplifies how to run multiple specifications for a multiverse analysis and store the estimates as a dataset 
 	including information on
 		- the outcome
 		- the beta coefficient of the multiple analysis paths
 		- the related standard error (se)
-		- the various decision choices taken (beyond the outcome, if applicable), for example on the iv and the covariates
-		- additional parameters, such as the number of observations, the outcome mean, and IV-related statistics
+		- the various decision choices taken (beyond the outcome, if applicable), for example on the set of covariates
+		- additional parameters, such as the number of observation and the outcome mean
+
+	The example uses data from the second US National health and Nutrition Examination Survey (NHANES II), 1976-1980, made available 
+	by A.C.Cameron & P.K.Trivedi (2022): Microeconometrics Using Stata, 2e, available under http://www.stata-press.com/data/mus2/mus206nhanes.dta.
+	The specific choices for the different analytical decisions made below do not all represent justifiable decisions for a multiverse analysis
+	but partly have the sole purpose of retrieving a Sensitivity Dashboard that shows three outcomes with varying indicator outputs.    
 
 	repframe_gendata requires version 12.0 of Stata or newer.
 					
@@ -22,99 +27,116 @@ program define repframe_gendata
 			
 	syntax
 	
-	
-	*** Install packages from SSC
-			local ssc_packages "ivreg2 ranktest"
-			
-			// avoid re-installing if already present
-			if !missing("`ssc_packages'") {
-				foreach pkg of local ssc_packages {
-					quietly which `pkg'
-					if _rc == 111 {                 
-						dis "Installing `pkg'"
-						quietly ssc install `pkg', replace
-					}
-				}
-			}
-			quietly ssc install estout, replace
-			
-	
-	*** Run multiverse analysis
-	local panel_list   iv cov1 cov2 cov3 cov4 cov5 
-	local m_max = 2*(2^5*3^1)
-	local n_max = 14		// # entries for each of the estimation results: outcome - IVest (yes/no) - beta_iqiv - se_iqiv - outcome_mean - N (outcome var) - FStat (IV) - iv - cov1 - cov2 - cov3 - cov4 - cov5 - neg_first
-	matrix R = J(`m_max', `n_max', .)   				
-	local R_matrix_col outcome IVest beta_iqiv se_iqiv outcome_mean N IVFStat `panel_list' neg_first 
-	matrix coln R =  `R_matrix_col'
-	
+	qui {
+		*** Set main locals 
+		local panel_list   outcome_vs cov1 cov2 cov3 cov4 ifcond
+		local m_max = 3*(1^1*2^5)
+		local n_max = 12		// # entries for each of the estimation results: outcome - beta_wgt - se_wgt - outcome_mean - N (outcome var) - outcome_vs - cov1 - cov2 - cov3 - cov4 - ifcond - pval_wgt
+		matrix R = J(`m_max', `n_max', .)   				
+		local R_matrix_col outcome beta_wgt se_wgt outcome_mean_wgt N `panel_list' pval_wgt
+		matrix coln R =  `R_matrix_col'
 		
-	local i = 1
-	local j = 1
+			
+		local i = 1
+		local j = 1
 
-	qui foreach outcome in lw lw80 {
-		foreach iv in "med kww age mrt" "med kww age" "med kww mrt" {
-			foreach cov1 in "" "s" {
-				foreach cov2 in "" "expr" {
-					foreach cov3 in "" "tenure" {
-						foreach cov4 in "" "rns" {
-							foreach cov5 in "" "smsa" {
-								ivreg2 `outcome' `cov1' `cov2' `cov3' `cov4' `cov5' i.year (iq=`iv')
-						
-								foreach var of local panel_list {
-									qui estadd scalar `var' = 0
+
+		*** make datset-specific adjustments 
+		
+		** keep necessary data
+		keep strata psu region location age height weight bpsystol bpdiast diabetes finalwgt leadwt vitaminc lead female black orace hsizgp rural loglead highbp highlead
+
+		** make some random sample restrictions 
+		keep if region==1
+		drop if diabetes==1 & rural==1
+
+		** choose outcomes 
+		rename highlead lead_vs1    
+		*rename lead     lead_vs2 // not used as these alternative outcomes are in different units
+		*rename loglead  lead_vs3
+		rename highbp   bp_vs1
+		*rename bpdiast  bp_vs2
+		*rename bpsystol bp_vs3
+		rename vitaminc vitaminc_vs1
+
+		rename finalwgt weight_bp
+		rename leadwt   weight_lead
+		clonevar weight_vitaminc = weight_bp
+
+
+		** run estimations and retrieve estimates
+		foreach outcome in bp lead vitaminc {
+			local lastvs 1
+			if "`outcome'"=="vitaminc" {
+				local lastvs 1
+			}
+			forval outcome_vs = 1(1)`lastvs' {
+				foreach cov1 in "" "age black orace" {
+					foreach cov2 in "" "height" {
+						foreach cov3 in "" "i.hsizgp" {
+							foreach cov4 in "" "rural" {
+								foreach ifcond in "" "if diabetes!=1 & female!=1" {
+									svyset psu [pweight=weight_`outcome'], strata(strata)
+									svy: reg `outcome'_vs`outcome_vs' weight `cov1' `cov2' `cov3' `cov4' i.location `ifcond'
+							
+									foreach var of local panel_list {
+										estadd scalar `var' = 0
+									}
+										
+									estadd scalar outcome_vs = `outcome_vs', replace
+				
+									if "`cov1'"=="age black orace" {
+										estadd scalar cov1 = 1, replace
+									}	
+									if  "`cov2'"=="height" {
+										estadd scalar cov2 = 1, replace
+									}
+									if  "`cov3'"=="i.hsizgp" {
+										estadd scalar cov3 = 1, replace
+									}
+									if  "`cov4'"=="rural" {
+										estadd scalar cov4 = 1, replace
+									}
+									if  "`ifcond'"=="if diabetes!=1 & female!=1" {
+										estadd scalar ifcond = 1, replace
+									}
+									
+									test weight
+									estadd scalar pval = `r(p)'
+
+									sum `outcome'_vs`outcome_vs' if e(sample)==1   // in this specific example only would actually have to account for svy, e.g. via -svy: mean- 
+									matrix R[`i',1] = `j', _b[weight], _se[weight], r(mean), r(N), e(outcome_vs), e(cov1), e(cov2), e(cov3), e(cov4), e(ifcond), e(pval)
+									local i = `i' + 1								
+									
 								}
-								
-								if "`iv'"=="med kww age" {
-									qui estadd scalar iv = 1, replace
-								}	
-								if "`iv'"=="med kww mrt" {
-									qui estadd scalar iv = 2, replace
-								}
-								if "`cov1'"=="s" {
-									qui estadd scalar cov1 = 1, replace
-								}	
-								if  "`cov2'"=="expr" {
-									qui estadd scalar cov2 = 1, replace
-								}
-								if  "`cov3'"=="tenure" {
-									qui estadd scalar cov3 = 1, replace
-								}
-								if  "`cov4'"=="rns" {
-									qui estadd scalar cov4 = 1, replace
-								}
-								if  "`cov5'"=="smsa" {
-									qui estadd scalar cov5 = 1, replace
-								}
-								
-								qui sum `outcome' if e(sample)==1
-								matrix R[`i',1] = `j', 1, _b[iq], _se[iq], r(mean), r(N), e(widstat), e(iv), e(cov1), e(cov2), e(cov3), e(cov4), e(cov5), e(neg_first)
-								local i = `i' + 1								
-								
 							}
 						}
 					}
-				}
-			}			
+				}			
+			}
+			local j = `j' + 1
 		}
-		local j = `j' + 1
-	}
-	
-	
-	*** Create multiverse dataset
-	svmat R, names(col)
-	keep `R_matrix_col'
-	
-	label define outcome    1 "log wage" 2 "log wage 80"
-	label val outcome outcome   	
-	
-	egen nmiss=rmiss(*)
-	drop if nmiss==`n_max'	
-	drop nmiss
+		
+		
+		*** create multiverse dataset
+		svmat R, names(col)
+		keep `R_matrix_col'
+		
+		label define outcome    1 "blood pressure" 2 "blood lead level" 3 "Vitamic C"
+		label val outcome outcome   	
+		
+		egen nmiss=rmiss(*)
+		drop if nmiss==`n_max'	
+		drop nmiss
 
-	gen beta_iqiv_orig_x = beta_iqiv if outcome==1 & iv==0 & cov1==0 & cov2==0 & cov3==0 & cov4==0 & cov5==0 
-	egen beta_iqiv_orig = mean(beta_iqiv_orig_x)
-	gen se_iqiv_orig_x = se_iqiv if outcome==1 & iv==0 & cov1==0 & cov2==0 & cov3==0 & cov4==0 & cov5==0 
-	egen se_iqiv_orig = mean(se_iqiv_orig_x)
-	drop *_x
-	
+		*** define original estimate
+			// here (random choice): - outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 -
+		foreach var in beta se pval outcome_mean {
+			bysort outcome:  gen `var'_wgt_orig_x = `var'_wgt if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0
+			bysort outcome: egen `var'_wgt_orig   = mean(`var'_wgt_orig_x)
+		}
+		drop if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 // original estimate is not supposed to be part of the multiverse
+		drop *_x
+	}
+
 end
