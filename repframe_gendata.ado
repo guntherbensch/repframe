@@ -1,6 +1,6 @@
 /*
 *** PURPOSE:	
-	This Stata do-file exemplifies how to run multiple specifications for a multiverse analysis and store the estimates as a dataset 
+	This Stata command exemplifies how to run multiple specifications for a multiverse analysis and store the estimates as a dataset 
 	including information on
 		- the outcome
 		- the beta coefficient of the multiple analysis paths
@@ -8,10 +8,12 @@
 		- the various decision choices taken (beyond the outcome, if applicable), for example on the set of covariates
 		- additional parameters, such as the number of observation and the outcome mean
 
-	The example uses data from the second US National health and Nutrition Examination Survey (NHANES II), 1976-1980, made available 
-	by A.C.Cameron & P.K.Trivedi (2022): Microeconometrics Using Stata, 2e, available under http://www.stata-press.com/data/mus2/mus206nhanes.dta.
+	The command is applied in the help file of the command -repframe-, where it is applied to data from the
+	second US National health and Nutrition Examination Survey (NHANES II), 1976-1980, made available by
+	A.C.Cameron & P.K.Trivedi (2022): Microeconometrics Using Stata, 2e, under http://www.stata-press.com/data/mus2/mus206nhanes.dta.
 	The specific choices for the different analytical decisions made below do not all represent justifiable decisions for a multiverse analysis
-	but partly have the sole purpose of retrieving a Sensitivity Dashboard that shows three outcomes with varying indicator outputs.    
+	but partly have the purpose of retrieving a Sensitivity Dashboard that shows three outcomes with varying indicator outputs while presenting
+	different ways to include certain analytical decisions into to Stata loop for estimation.    
 
 	repframe_gendata requires version 12.0 of Stata or newer.
 					
@@ -137,6 +139,16 @@ program define repframe_gendata
 		}
 		drop if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 // original estimate is not supposed to be part of the multiverse
 		drop *_x
+
+		*** shorten varnames as the {stata ""} option in the stata help file only allows for a certain number of characters 
+		rename outcome_mean_wgt			out_mn
+		rename outcome_mean_wgt_orig	out_mn_og 
+		rename beta_wgt					b
+		rename beta_wgt_orig			b_og
+		rename se_wgt  					se
+		rename se_wgt_orig				se_og  
+		rename pval_wgt					p
+		rename pval_wgt_orig			p_og
 	}
 
 end

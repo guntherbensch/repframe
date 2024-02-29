@@ -1,4 +1,4 @@
-*! version 1.4  28feb2024 Gunther Bensch
+*! version 1.4.1  29feb2024 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
@@ -56,10 +56,10 @@ prog def repframe, sortpreserve
 	
 syntax varlist(numeric max=1) [if] [in], 
 [ 
-beta(varname numeric) beta_orig(varname numeric) shortref(string)  
+beta(varname numeric) beta_orig(varname numeric) shortref(string)  siglevel(numlist max=1 integer) siglevel_orig(numlist max=1 integer)  
 se(varname numeric) se_orig(varname numeric)  pval(varname numeric) pval_orig(varname numeric)  zscore(varname numeric) zscore_orig(varname numeric)
 STUDYPOOLing(numlist max=1 integer) 
-siglevel(numlist max=1 integer) siglevel_orig(numlist max=1 integer)  df(varname numeric) df_orig(varname numeric)  mean(varname numeric) mean_orig(varname numeric)  sameunits(varname numeric) 
+df(varname numeric) df_orig(varname numeric)  mean(varname numeric) mean_orig(varname numeric)  sameunits(varname numeric) 
 filepath(string)] [FILEIDentifier(string)  IVARWeight(numlist max=1 integer)  orig_in_multiverse(numlist max=1 integer) 
 shelvedind(numlist max=1 integer) 
 beta2(varname numeric) beta2_orig(varname numeric)  se2(varname numeric) se2_orig(varname numeric)  pval2(varname numeric) pval2_orig(varname numeric)  zscore2(varname numeric) zscore2_orig(varname numeric) 
@@ -72,7 +72,7 @@ SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(numlist max=1 
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.3.1  13feb2024"
+	local repframe_vs  "version 1.4.1  29feb2024"
 
 *** Preserve initial dataset 
 	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not ossible) as different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
@@ -133,6 +133,13 @@ qui {
 ***  PART 2.A  COMMAND OPTIONS
 ************************************************************
 
+*** Option studypooling
+	if ("`studypooling'"!="" & "`studypooling'"!="0" & "`studypooling'"!="1") {
+		noi dis "{red: If {opt studypooling} is defined, it needs to take on the value 0 (no) or 1 (yes).}"	
+		use `inputdata', clear
+		exit
+	}
+	
 *** Options beta, beta_orig, se, se_orig, pval, pval_orig, zscore, zscore_orig (& df, df_orig)
 	if `studypooling'==0 {	
 		if ("`beta'"=="" | "`beta_orig'"=="") & "`shortref'"=="" { 
@@ -183,6 +190,10 @@ qui {
 			exit
 		}
 		
+		if (("`se'"=="" & "`se_orig'"=="") | ("`pval'"=="" & "`pval_orig'"=="")) {
+			noi dis "It is recommended to specify both sets of variables {opt se()} & {opt se_orig()} and {opt pval()} & {opt pval_orig()}. The command {cmd:repframe} determines the non-specified variables based on the conventional {it:t}-test formula, which may not be appropriate in all cases, e.g. when using {opt svy:} in the original estimations."
+		}
+
 		if "`se'"=="" & "`zscore'"=="" & "`df'"=="" {
 			noi dis "{opt pval()} and {opt pval_orig()} are specified. Note that it is assumed that these p-values are derived from two-sided t-tests."
 			gen     se_i   	= abs(`beta'/invnormal(`pval'/2))	
@@ -248,14 +259,7 @@ qui {
 		}
 	}
 
-
-*** Options studypooling, siglevel, siglevel_orig
-	if ("`studypooling'"!="" & "`studypooling'"!="0" & "`studypooling'"!="1") {
-		noi dis "{red: If {opt studypooling} is defined, it needs to take on the value 0 (no) or 1 (yes).}"	
-		use `inputdata', clear
-		exit
-	}
-
+*** Options siglevel, siglevel_orig
 	if `studypooling'==1 {
 		if "`siglevel'"!="" | "`siglevel_orig'"!="" {
 			noi dis "{red: If {opt studypooling(1)}, significance levels will be retrieved from the input data so that ({opt siglevel}) and ({opt siglevel_orig}) are not meant to be used together with option {opt studypooling(1)}.}"
@@ -273,10 +277,17 @@ qui {
 		}
 	}
 	else {
-		if "`siglevel'"=="" {
-			local signum_ra = 5
-			// the condition -if "`siglevel'"=="" & `studypooling'==1- is already defined above under -if `studypooling'==1-
-		}
+		if "`siglevel'"=="" & "`siglevel_orig'"=="" { 
+			noi dis "{red: Unless {opt studypooling(1)} is specified, both {opt siglevel()} and {opt siglevel_orig()} has to be specified}"	
+			use `inputdata', clear
+			exit
+		}			
+			
+		if "`siglevel'"=="" { 
+			noi dis "{red: Unless {opt studypooling(1)} is specified, {opt siglevel()} has to be specified}"	
+			use `inputdata', clear
+			exit
+		}		
 		else {
 			local signum_ra = "`siglevel'"
 		}
@@ -286,9 +297,10 @@ qui {
 			exit
 		}
 		
-		if "`siglevel_orig'"=="" {
-			local signum_oa = 5
-			// the condition -if "`siglevel_orig'"=="" & `studypooling'==1- is already defined above under -if `studypooling'==1-
+		if "`siglevel_orig'"=="" { 
+			noi dis "{red: Unless {opt studypooling(1)} is specified, {opt shortref()} has to be specified}"	
+			use `inputdata', clear
+			exit
 		}
 		else {
 			local signum_oa = "`siglevel_orig'"
@@ -313,8 +325,6 @@ qui {
 		local sigdigits_oa `signum_oa'
 	}
 		
-
-
 *** Options mean, mean_orig, sameunits
 	if `studypooling'==0 {
 		if "`mean_orig'"=="" {
@@ -340,7 +350,6 @@ qui {
 			drop `sameunits'
 		}
 	}
-
 
 *** Options filepath, fileidentifier, ivarweight, orig_in_multiverse
 	if "`filepath'"=="" {
@@ -398,7 +407,6 @@ qui {
 	if "`shelvedind'"=="" {
 		local shelvedind = 0
 	}
-
 
 *** Options beta2, beta2_orig, se2, se2_orig, pval2, pval2_orig, zscore2, zscore2_orig
 	if `studypooling'==0 {
@@ -528,7 +536,6 @@ qui {
 		}
 	}
  
-
 *** Options vshortref_orig, extended, aggregation, graphfmt, ivF, signfirst
 	if "`ivF'"=="" {
 		local tFinclude = 0
@@ -569,7 +576,6 @@ qui {
 			}
 			local aggregation = 1
 		}
-
 
 		if "`graphfmt'"=="" {
 			local graphfmt emf

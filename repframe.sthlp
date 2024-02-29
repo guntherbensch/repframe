@@ -37,20 +37,20 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {syntab:parameters required in analyses at study level {help repframe##options:[+]}}
 {synopt:{opt beta(varname)}}beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt beta_orig(varname)}}original beta coefficient for respective outcome{p_end}
+{synopt:{opt siglevel(#)}}significance level{p_end}
+{synopt:{opt siglevel_orig(#)}}maximum significance level labelled as statically significant by original authors{p_end}
 {synopt:{opt shortref(string)}}short study reference{p_end}
 
 {syntab:parameters being semi-optional in analyses at study level {help repframe##dsemioptional_para:[+]}}
+{synopt:{opt pval(varname)}}{it:p}-values on statistical significance of estimates in analysis paths of robustness tests{p_end}
+{synopt:{opt pval_orig(varname)}}{it:p}-values on statistical significance of original estimate for respective outcome{p_end}
 {synopt:{opt se(varname)}}standard errors of beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt se_orig(varname)}}standard errors of the original beta coefficient for respective outcome{p_end}
 {synopt:{opt zscore(varname)}}{it:t}/{it:z} scores of estimates in analysis paths of robustness tests{p_end}
 {synopt:{opt zscore_orig(varname)}}{it:t}/{it:z} scores of original estimates for respective outcome{p_end}
-{synopt:{opt pval(varname)}}{it:p}-values on statistical significance of estimates in analysis paths of robustness tests{p_end}
-{synopt:{opt pval_orig(varname)}}{it:p}-values on statistical significance of original estimate for respective outcome{p_end}
 
 {syntab:optional parameters {help repframe##optional_para:[+]}}
 {synopt:{opt studypool:ing(0/1)}}pool Reproducibility and Replicability Indicators across studies{p_end}
-{synopt:{opt siglevel(#)}}significance level{p_end}
-{synopt:{opt siglevel_orig(#)}}maximum significance level labelled as statically significant by original authors{p_end}
 {synopt:{opt df(varname)}}degrees of freedom in analysis paths of robustness tests{p_end}
 {synopt:{opt df_orig(varname)}}degrees of freedom in the original study outcome{p_end}
 {synopt:{opt mean(varname)}}mean of the outcome variables in the analysis paths of robustness tests{p_end}
@@ -110,6 +110,14 @@ The required data structure and the output data with the different indicators is
 {opt beta_orig(varname)} specifies the variable {it:varname} that includes the original beta coefficient for the respective outcome at study level.
 
 {phang}
+{opt siglevel(#)} gives the significance level for two-sided tests at study level; {cmd:siglevel(5)}, for example, stands for a 5% level.
+
+{phang}
+{opt siglevel_orig(#)} gives the maximum level of statistical significance labelled as statically significant by original authors, assuming two-sided tests; 
+if specified, original results will be classified as statistically significant against this benchmark; 
+{cmd:siglevel_orig(5)}, for example, stands for a 5% level applied by original authors. 
+
+{phang}
 {opt shortref(string)} provides a short reference in string format for the study, such as "[first author] et al. (year)".
 This reference can either be a reference to the original study or to the reproducability or replicability analysis study.
 
@@ -118,34 +126,42 @@ This reference can either be a reference to the original study or to the reprodu
 {dlgtab:parameters being semi-optional in analyses at study level}
 
 {phang}
-The command {it:repframe} requires that either both {cmd:pval()} and {cmd:pval_orig()} are specified or both {cmd:se()} and {cmd:se_orig()} 
-or both {cmd:zscore()} and {cmd:zscore_orig()}.
-
-{phang}
-{opt se(varname)} specifies the variable {it:varname} that includes the standard errors of beta coefficients in analysis paths of robustness tests;
-if {cmd:se()} is not specified, it is calculated based on {cmd:beta()} and {cmd:pval()} or {cmd:beta()} and {cmd:zscore()}.
-
-{phang}
-{opt se_orig(varname)} specifies the variable {it:varname} that includes the standard errors of the original beta coefficient for the respective outcome;
-if {cmd:se_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:pval_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()}.
-
-{phang}
-{opt zscore(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} scores of estimates in analysis paths of robustness tests;
-if {cmd:zscore()} is not specified, it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:pval()}.
-
-{phang}
-{opt zscore_orig(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} score of the original estimate for the respective outcome;
-if {cmd:zscore_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:pval_orig()}.
+The command {it:repframe} requires that either both {cmd:pval()} and {cmd:pval_orig()} are specified or both {cmd:se()} and {cmd:se_orig()}
+or both {cmd:zscore()} and {cmd:zscore_orig()}. The command {it:repframe} determines the non-specified variables based on
+the conventional {it:t}-test formula. Importantly, it is recommended to specify both the information on {it:p}-values and standard errors,
+because the application of this formula may not be appropriate in all cases.
+For example, when the original estimations accounted for sampling weights (pweights) using the command {cmd:svy:},
+{it:p}-values will not be correctly derived using that formula (see the {help repframe##examples:examples}). 
 
 {phang}
 {opt pval(varname)} specifies the variable {it:varname} that includes the {it:p}-values on statistical significance of estimates in analysis paths
-of robustness tests; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval()} is not specified, 
-it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:zscore()}.
+of robustness tests; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval()} is not specified,
+it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:zscore()} using the conventional {t}-test formula.
 
 {phang}
 {opt pval_orig(varname)} specifies the variable {it:varname} that includes the {it:p}-value on statistical significance of the original estimate
-for the respective outcome; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval_orig()} is not specified, 
-it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()}.
+for the respective outcome; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval_orig()} is not specified,
+it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()} using the conventional {t}-test formula.
+
+{phang}
+{opt se(varname)} specifies the variable {it:varname} that includes the standard errors of beta coefficients in analysis paths of robustness tests;
+if {cmd:se()} is not specified, it is calculated based on {cmd:beta()} and {cmd:pval()}
+or {cmd:beta()} and {cmd:zscore()} using the conventional {t}-test formula. 
+
+{phang}
+{opt se_orig(varname)} specifies the variable {it:varname} that includes the standard errors of the original beta coefficient for the respective outcome;
+if {cmd:se_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:pval_orig()}
+or {cmd:beta_orig()} and {cmd:zscore_orig()} using the conventional {t}-test formula.
+
+{phang}
+{opt zscore(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} scores of estimates in analysis paths of robustness tests;
+if {cmd:zscore()} is not specified, it is calculated based on {cmd:beta()} and {cmd:se()}
+or {cmd:beta()} and {cmd:pval()} using the conventional {t}-test formula.
+
+{phang}
+{opt zscore_orig(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} score of the original estimate for the respective outcome;
+if {cmd:zscore_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} 
+or {cmd:beta_orig()} and {cmd:pval_orig()} using the conventional {t}-test formula.
 
 
 {marker optional_para}{...}
@@ -154,13 +170,6 @@ it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_ori
 {phang}
 {opt studypool:ing(0/1)} is a binary indicator on whether input data are Reproducibility and Replicability Indicators on individual studies, 
 for which Indicators pooled across studies are to be calculated; default is {cmd:studypooling(0)}.
-
-{phang}
-{opt siglevel(#)} gives the significance level for two-sided tests (e.g. 1,5,10); default is {cmd:siglevel(5)} (i.e. 5% level).
-
-{phang}
-{opt siglevel_orig(#)} gives the maximum level of statistical significance labelled as statically significant by original authors, assuming two-sided tests; 
-if specified, original results will be classified as statistically significant against this benchmark; default is {cmd:siglevel_orig(5)} (i.e. 5% level). 
 
 {phang}			
 {opt df(varname)} specifies the variable {it:varname} that includes the degrees of freedom in analysis paths of robustness tests; if {cmd:df()} is not specified,
@@ -295,7 +304,7 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {phang}	
 {bf:Reproducibility and Replicability Indicators and Sensitivity Dashboard}
 
-{p 8 12}. {stata "repframe outcome, beta(beta_wgt) beta_orig(beta_wgt_orig) pval(pval_wgt) pval_orig(pval_wgt_orig) shortref(repframe_example) siglevel_orig(10) mean(outcome_mean_wgt) mean_orig(outcome_mean_wgt_orig)"}{p_end}
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)  mean(out_mn) mean_orig(out_mn_og)"}{p_end}
 
 {p 8 12}
 [{it:note that this example requires that the output table can be stored in the operating system's standard /Downloads folder. If this does not work, specify the file location with the option} {cmd:filepath(string)}.]{p_end}

@@ -1,6 +1,6 @@
-> # **Feb 28, 2024: An update of the command and its description will be available in the coming week.**
+> # **Feb 29, 2024: An update of the command and its description will be available in the coming week.**
 
-# REPFRAME v1.4
+# REPFRAME v1.4.1
 
 This is a Stata package that produces Reproducibility and Replicability Indicators and Sensitivity Dashboards. These tools compare estimates from a multiverse of analysis paths of robustness tests - be they reproducibility or replicability analyses - to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works. 
 
@@ -18,12 +18,12 @@ for the syntax and the whole range of options.
 
 ## Required input data structure
 
-The data needs to be in a specific format for repframe to be able to calculate the Indicators and Dashboards. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness test. 
+The data needs to be in a specific format for `repframe` to be able to calculate the Indicators and Dashboards. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness test. 
 In the below toy example with only one main outcome, two alternative choices are assessed for one analytical decision (**analytical decision_1**, e.g. a certain adjustment of the outcome variable) and three alternative choices are assessed for two other analytical decision (**analytical decision_2** and **analytical decision_3**, e.g. the set of covariates and the sample used). This gives a multiverse of 3^2*2^1 = 18 analysis paths, if all combinations are to be considered. The number of observations is therefore 18 in this example.
 
-For each observation, the minimum requirement is that the variables **outcome**, **beta** and **beta_orig** are defined together with **se** and **se_orig**. As an alternative to the standard error information, information on *p*-values (**pval** and **pval_orig**) or on the *t*/*z*-score (**zscore** and **zscore_orig**) may be provided.  
+For each observation, the minimum requirement is that the variables **outcome**, **beta** and **beta_orig** are defined together with **se** and **se_orig**. As an alternative to the standard error information, information on *p*-values (**pval** and **pval_orig**) or on the *t*/*z*-score (**zscore** and **zscore_orig**) may be provided. `repframe` determines the non-specified variables based on the conventional *t*-test formula. Importantly, it is recommended to specify both the information on {p}-values and standard errors, because the application of this formula may not be appropriate in all cases. For example, when the original estimations accounted for sampling weights (pweights) using the command `svy:`, *p*-values will not be correctly derived using that formula.  
 
-It is important to note that, irrespective of whether the original analysis is included as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis in the variables ending with **_orig**. Also note that the variable **outcome** should be numeric with value labels.
+It is also important to note that, irrespective of whether the original analysis is included as one analysis path in the multiverse robustness test or not, the dataset should only include the information on the original analysis in the variables ending with **_orig**. Also note that the variable **outcome** should be numeric with value labels.
 
 <img width="800" alt="toy example of repframe multiverse input data structure" src="https://github.com/guntherbensch/repframe/assets/128997073/dcace409-a602-47d5-a240-67961eda3256"> &nbsp;
 
@@ -127,9 +127,14 @@ Similarly, aggregation across studies is simply done by averaging the indicators
 
 ## Update log
 
-2024-02-XX, v1.4:
+2024-02-29, v1.4.1:
 
-- Add option `siglevel_orig' to allow testing against significance level adopted by original authors.
+- Make options `siglevel` and `siglevel_orig` compulsory for analyses at study level.
+- Add recommendation to include both the information on {p}-values and standard errors at study level.
+
+2024-02-28, v1.4:
+
+- Add option `siglevel_orig` to allow testing against significance level adopted by original authors.
 - Additional effect size agreement / confidence interval coverage indicator.
 
 2024-02-13, v1.3.1:
@@ -138,15 +143,15 @@ Similarly, aggregation across studies is simply done by averaging the indicators
 
 2024-01-22, v1.3:
 
-- Add the option `studypooling' to calculate indicators across studies.
+- Add the option `studypooling` to calculate indicators across studies.
 
 2024-01-19, v1.2:
 
-- Incorporate the package `sensdash'.
+- Incorporate the package `sensdash`.
 
 2024-01-18, v1.1:
 
-- First version of `repframe' package.
+- First version of `repframe` package.
 
 
 ## References
