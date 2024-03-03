@@ -143,13 +143,13 @@ $$ I´_{1j} = mean(\mathbb{I}(pval_i \le \alpha) \times \mathbb{I}(\beta_i \time
 applied separately to $pval^{orig}_j \le \alpha$ and $pval^{orig}_j > \alpha$. 
 The same indicator is also calculated for statistically significant robustness results with opposite sign, i.e. differing from the above formula through $\mathbb{I}(\beta_i \times \beta^{orig}_j < 0)$.
 
-:point_right: This percentage indicator is intended to capture the *technical* robustness of results (are estimates robust in terms of achieving a certain level of statistical significance?)?
-> *Interpretation*: An indicator $I´_{1j}$ of 3o\% implies that 30\% of robustness test analysis paths for outcomes $j$ are statistically significant. Depending on which of the four sub-indicators of the *Sensitivity Dashboard* one is referring to, this refers to (i) statistically significant *or* insignficant original results and to (ii) original and robustness coefficients that share *or* do not share the same sign. The significance level applied to both the original study and the robustness analysis is the one defined in the robustness analysis. For example, if $I´_{1j}$ is 30\% for results with the same sign and 3\% for results with opposite signs, the remaining 67\% of robustness analysis paths for this outcome are statistically insignificant. 
+:point_right: This percentage indicator is intended to capture the *technical* robustness of results (are estimates robust in terms of achieving a certain level of statistical significance?).
+> *Interpretation*: An indicator $I´_{1j}$ of 30\% implies that 30\% of robustness test analysis paths for outcomes $j$ are statistically significant. Depending on which of the four sub-indicators of the *Sensitivity Dashboard* one is referring to, this refers to (i) statistically significant *or* insignficant original results and to (ii) original and robustness coefficients that share *or* do not share the same sign. The significance level applied to both the original study and the robustness analysis is the one defined in the robustness analysis. For example, if $I´_{1j}$ is 30\% for results with the same sign and 3\% for results with opposite signs, the remaining 67\% of robustness analysis paths for this outcome are statistically insignificant. 
 
 
 2. The **indicator on non-agreement due to significance definition** is an auxiliary significance agreement indicator that focuses on *classification* reproducibility or replicability of results as defined above. It identifies those originally significant results that have statistically insignificant robustness analysis paths only because a more stringent significance level definition is applied in the robustness analysis than in the original analysis. The indicator is also expressed in \% and therefore includes the muliplication by 100. 
 
-$$ I´_{2j} = mean(\mathbb{I}(\alpha < pval_i \le \alpha^{orig}_j) \times 100  \quad  \text{if } \alpha < pval^{orig}_j \le \alpha^{orig}_j $$
+$$ I´_{2j} = mean(\mathbb{I}(\alpha < pval_i \le \alpha^{orig}_j)) \times 100  \quad  \text{if } \alpha < pval^{orig}_j \le \alpha^{orig}_j $$
 
 $$ I´_{2j}  \text{ not applicable otherwise} $$
 
@@ -157,62 +157,71 @@ $$ I´_{2j}  \text{ not applicable otherwise} $$
 > *Interpretation*: Consider the case where the robustness analysis paths apply a significance level of 5\% and the original analysis applied a significance level of 10\%. In this case, robustness results with $0.05 < pval_i \le 0.10$ are only categorized as insignificant and thus having a non-agreeing significance level because of differing definitions of statistical significance. An indicator $I´_{2j}$ of 10\%, for example, implies that this holds true for 10\% of robustness test analysis paths for outcome $j$.
 
 
-3. The **relative effect size indicator** differs from I_{2j} from the *Reproducibility and Replicability Indicators table* in that it is only derived for robustness analysis paths that are (i) statistically significant and (ii) in the same direction as the original result. In addition, the indicator takes the median of the robustness estimates instead of the mean, in order to be less sensitive to outliers. Furthermore, one is subtracted from the ratio, in order to underscore the relative nature of the indicator. A ratio of 2/5 thus turns into -3/5, and multiplied by 100 to -60\%.
+3. The **relative effect size indicator** differs from $I_{2j}$ from the *Reproducibility and Replicability Indicators table* in that it is only derived for robustness analysis paths that are (i) statistically significant and (ii) in the same direction as the original result. In addition, the indicator takes the median of the robustness estimates instead of the mean, in order to be less sensitive to outliers. Furthermore, one is subtracted from the ratio, in order to underscore the relative nature of the indicator. A ratio of 2/5 thus turns into -3/5, and multiplied by 100 to -60\%.
 
 $$ I´_{3j} = (\frac{median(\beta_i)} {\beta^{orig}_j} - 1) \times 100  \quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha \land \beta_i \times \beta^{orig}_j \ge 0 $$
 
 $$ I´_{3j}  \text{ not applicable otherwise} $$
 
 :point_right: This percentage indicator is intended to capture how the size of robustness coefficients compares to the size of original coefficients, if the two sets of results are comparable in terms of being both statistically significant and in the same direction.  
-> *Interpretation*: An indicator $I´_{3j}$ above (below) 0\% means that the mean of the coefficients of robustness analysis paths that are (i) statistically significant and (ii) in the same direction as the original result for an originally significant outcome $j$ is higher (lower) than the original coefficient, by $I´_{3j}$\% - e.g. +30\% (-30\%).
+> *Interpretation*: An indicator $I´_{3j}$ for outcome $j$ with an originally significant result (below) 0\% means that the mean of statistically significant robustness coefficients in the same direction as the original result is higher (lower) than the original coefficient, by $I´_{3j}$\% - e.g. +30\% (-30\%).
 
 
 The Sensitivity Dashboard does not include a **relative significance indicator**.
 
 
-4. The **effect size variation indicator** measures the mean absolute deviation of coefficients in robustness test analysis paths from their median as determined by $I'_{3j}$. Again, it is only derived for statistically significant robustness results in the same direction as the original result and multiplied by 100.
-Here, the $\beta_i$ may incorporate the original result as one robustness test analysis path.
+4. The **effect size variation indicator** measures the mean absolute deviation of coefficients in robustness analysis paths from their median. Like $I´_{3j}$, it only considers robustness analysis paths for outcomes reported as statistically significant that are (i) statistically significant and (ii) in the same direction as the original result. The mean value is divided by the original coefficient and multiplied by 100 so that it is measured in the same unit as $I´_{3j}$. Here, the $\beta_i$ may incorporate the original result as one robustness test analysis path.
 
 $$ I´_{4j} = \frac{mean(\mid \beta_i - median(\beta_i) \mid)}  {\beta^{orig}_j} \times 100  	\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha \land \beta_i \times \beta^{orig}_j \ge 0 $$ 
 
 $$ I´_{4j}  \text{ not applicable otherwise} $$
 
-:point_right: This percentage indicator is intended to capture how the variation in coefficients of robustness results compares to the variation in coefficients among original results, if the two sets of results are comparable in terms of being both statstically significant and in the same direction.. 
-> *Interpretation*: An indicator $I´_{4j}$ above (below) 1 means that variation across robustness results of either statistically significant or insignifcant original results for outcome $j$ is higher (lower) than the variation across original results, with a factor of $I´_{4j}$. 
+:point_right: This percentage indicator is intended to capture how the variation in coefficients of robustness results compares to the variation in coefficients among original results, if the two sets of results are comparable in terms of being both statstically significant and in the same direction. 
+> *Interpretation*: An indicator $I´_{4j}$ of, for example, 10\% means that variation across robustness results for outcome $j$ is equivalent to 10\% of the original coefficient. 
 
 
-5. The **significance variation indicator** measures the mean of the deviations between *p*-values from the robustness test analysis paths and the original *p*-value. This indicator is only derived for statistically insignificant robustness results.
+5. The **significance variation indicator** measures the mean of the deviations between *p*-values from the robustness analysis paths and the original *p*-value. This indicator is always derived, except for robustness and original results that are both statistically significant, since this deviation is know to be small.
 
-$$ I´_{5j} = mean(\mid pval_i - pval^{orig}_j \mid)		\quad  \text{if } pval_i > \alpha $$ 
+$$ I´_{5j} = mean(\mid pval_i - pval^{orig}_j \mid) $$ 
 
-applied separately to $pval^{orig}_j \le \alpha$ and $pval^{orig}_j > \alpha$.
+applied separately to (i) $pval^{orig}_j \le \alpha \land pval_i > \alpha$, 
+                     (ii) $pval^{orig}_j > \alpha \land pval_i > \alpha$, and 
+                    (iii) $pval^{orig}_j > \alpha \land pval_i \le \alpha$.
 
-:point_right: This indicator is intended to capture the variation in the statistical significance across robustness results for statistically insignificant robustness results. The indicator is restricted to statistically insignificant robustness results given that the variation for statstically significant robustness results is either known to be very small (originally signifcant results) or less relevant (originally insignificant results).
-> *Interpretation*: An indicator $I´_{5j}$ of 0.2, for example, implies that *p*-values in statistically insignificant robustness test analysis paths for outcome $j$ on average differ by 0.2 from the original *p*-value. Like *p*-values themselves, this deviation may assume values between 0 and 1. If the share of statistically insignificant robustness test analysis paths for this outcome is much (only little) higher than the 10\%, this indicates that few (most) robustness test analysis paths classified as non-confirmatory according to the *statistical significance indicator* are classified as confirmatory according to the 
-
-
-6. The *Sensitivity Dashboard* additionally includes an **effect size agreement indicator** that measures the ...
-
-$$ I´_{6j} = mean(\mathbb{I}(beta_i \ge beta^{lowero}_j \land beta_i \le beta^{uppero}_j)) 		\quad  \text{if } pval_i > \alpha $$ 
-
-applied ...
-
-:point_right: This indicator is intended to capture ...
-> *Interpretation*: An indicator $I´_{6j}$ of ...
+:point_right: This absolute indicator is intended to capture the variation in statistical significance across statistically insignificant robustness results.
+> *Interpretation*: An indicator $I´_{5j}$ of 0.2, for example, implies that *p*-values in statistically insignificant robustness analysis paths for outcome $j$ on average differ by 0.2 from the original *p*-value. Like *p*-values themselves, this deviation may assume values between 0 (very small deviation) and 1 (maximum deviation). 
 
 
-7. Lastly, the *Sensitivity Dashboard* allows calcluating **significance switch indicators** that measure ...
+The *Sensitivity Dashboard* additionally includes the option `extended(string)` to show two indicators in an extended set of indicators. 
 
-$$ I´_{7j} =  $$
+
+6. The **effect size agreement indicator** measures the share of robustness coefficients that lie inside the bounds of the confidence interval of the original coefficient, $\beta(cilo)^{orig}_j$ and $\beta(ciup)^{orig}_j$. It only considers robustness analysis paths for outcomes reported as statistically significant in the original study that are statistically insignificant.
+
+$$ I´_{6j} = mean(\mathbb{I}(\beta(cilo)^{orig}_j \le \beta_i \le beta(ciup)^{orig}_j)) \times 100 		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i > \alpha $$ 
+
+$$ I´_{6j}  \text{ not applicable otherwise} $$
+
+:point_right: This percentage indicator is intended to complement the *significance agreement indicator* and thereby to capture *technical* robustness of results not only in terms of achieving a certain but arbitrary level of statistical significance, but also in terms of showing similarity of coefficients.
+> *Interpretation*: An indicator $I´_{6j}$ of 10\% implies that 10\% of robustness analysis paths for this outcome $j$ with originally significant results are insignificant according to the significance level adopted by the robustness analysis, but with robustness coefficients that cannot be rejected to lie inside the confidence interval of the original result. If the share of statistically insignificant robustness analysis paths for this outcome is much (only little) higher than the 10\%, this indicates that few (most) robustness test analysis paths classified as non-confirmatory according to the *statistical significance indicator* are classified as confirmatory according to the *effect size agreement indicator*.
+
+
+7. The **significance switch indicators** measure the share of robustness coefficients (standard errors) that are sufficiently large or small to turn significant original results insignificant or vice versa. For originally significant results, these indicators measure the share of robustness coefficients (standard errors) that are sufficiently large (small) to turn insignificant or vice versa. 
+
+$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  > \beta(sighi)) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
+
+$$ I´_{7j} = mean(\mathbb{I}(\mid se_i \mid  < se(sighi)) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
+
+
+For originally insignificant results, 
+
+$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  \le \beta(siglo)) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
+
+$$ I´_{7j} = mean(\mathbb{I}(\mid se_i \mid  \ge se(siglo)) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
+
 
 :point_right: This indicator is intended to capture ...
 > *Interpretation*: An indicator $I´_{7j}$ of ...
 
-
-
-For all indicators, aggregation at the study level is simply done by averaging the indicators as computed at outcome level, separately for originally significant and originally insignificant outcomes according to the significance level adpoted in the robustness analysis. 
-
-Similarly, aggregation across studies is simply done by averaging the indicators as computed at study level. 
 
 > More information following soon.
 
