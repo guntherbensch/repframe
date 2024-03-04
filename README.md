@@ -1,6 +1,4 @@
-> # **Feb 29, 2024: An update of the command and its description will be available in the coming week.**
-
-# REPFRAME v1.4.1
+# REPFRAME v1.4.2
 
 This is a Stata package to calculate, tabulate and visualize Reproducibility and Replicability Indicators. These indicators compare estimates from a multiverse of analysis paths of a robustness analysis &mdash; be they reproducibility or replicability analyses &mdash; to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works.  
 
@@ -26,7 +24,7 @@ The `repframe` command applies a few default assumptions. Use the following opti
 
 <ins>Tests for statistical significance</ins>: The command applies two-sided *t*-tests to define which *p*-values imply statistical significance. These tests may apply different significance levels to the original results (`siglevel_orig(#)`) and to the robustness results (`siglevel(#)`). If the related *p*-values inputted via the options `pval(varname)` and `pval_orig(varname)` are based on one-sided tests, these *p*-values need to be multiplied by two so as to make them correspond to a two-sided test. If no information on *p*-values is available, the command derives the missing *p*-value information applying the *t*-test formula. Depending on which additional information is available, this may done based on *t*/*z*-scores (`zscore(varname)` and `zscore_orig(varname)`), on standard errors (`se(varname)` and `se_orig(varname)`) and degrees of freedom (`df(varname)` and `df_orig(varname)`), or on standard errors assuming a normal distribution. Remember that the latter may not always be appropriate, for example with small samples or when estimations have few degrees of freedom because they account for survey sampling, e.g. via the Stata command `svy:`. Conversely, if input data on *p*-values is based on other distributional assumptions than normality, the formula may not correctly derive standard errors. It is therefore recommended to specify both the information on *p*-values and on standard errors, and to consider the implications if non-normality is assumed in either the original or robustness analysis. 
 
-<ins>Units in which effect sizes are measured</ins>: The command assumes that effect sizes of original results and robustness results are measured in the same unit. If this is not the case, for example because one is measured in log terms and the other is not, use the option `sameunits(varname)`. this option requires a numerical variable **varname** containing the observation-specific binary information on whether the two are measured in the same unit (1=yes) or not (0=no).
+<ins>Units in which effect sizes are measured</ins>: The command assumes that effect sizes of original results and robustness results are measured in the same unit. If this is not the case, for example because one is measured in log terms and the other is not, use the option `sameunits(varname)`. This option requires a numerical variable **varname** containing the observation-specific binary information on whether the two are measured in the same unit (1=yes) or not (0=no).
 
 <ins>Original analysis to be included as one robustness analysis path</ins>: The command assumes that the original analysis is not to be included as one analysis path in the multiverse robustness analysis. Otherwise specify the option `orig_in_multiverse(1)`. Then, the original result is incorporated in the computation of the two [variation indicators](#the-reproducibility-and-replicability-indicators). Irrespective of whether the original analysis is included as one robustness analysis path or not, the dataset should only include the information on the original analysis in the variables inputted via the options ending with *_orig*, and not as a separate robustness analysis path.
 
@@ -111,7 +109,7 @@ $$ I_{3j}  \text{ not applicable}  \quad  \text{if } pval^{orig}_j > \alpha^{ori
 
 
 4. The **effect size variation indicator** measures for each outcome $j$ the standard deviation $sd$ of all robustness coefficients divided by the standard error $se$ of the original coefficient. 
-Here, the $\beta_i$ may incorporate the original result as one robustness analysis path.
+Here, the $\beta_i$ may incorporate the original result as one robustness analysis path. The indicator requires that the effect sizes of the original and robustness results are measured in the same units.
 
 $$ I_{4j} = \frac{sd(\beta_i)}{se(\beta^{orig}_j)} $$
 
@@ -129,6 +127,10 @@ applied separately to $pval^{orig}_j \le \alpha^{orig}$ and $pval^{orig}_j > \al
 
 :point_right: This absolute indicator is intended to capture the variation in the statistical significance across robustness results.
 > *Interpretation*: $I_{5j}$ simply reports the standard deviation of *t*/*z*-values of all the robustness analysis paths for outcome $j$ as a measure of variation in statistical significance. Higher values indicate higher levels of variation.
+
+The following shows an example of the *Reproducibility and Replicability Indicators table*, indicating the five indicators as outlined above.
+<img width="600" alt="repframe indicators table example" src="https://github.com/guntherbensch/repframe/assets/128997073/24f31cc0-87b4-42bf-8446-621e22db3fe5"> &nbsp;
+&nbsp;
 
 
 ### Sensitivity Dashboard
@@ -148,7 +150,7 @@ The same indicator is also calculated for statistically significant robustness r
 > *Interpretation*: An indicator $I´_{1j}$ of 30\% implies that 30\% of robustness analysis paths for outcomes $j$ are statistically significant. Depending on which of the four sub-indicators of the *Sensitivity Dashboard* one is referring to, this refers to (i) statistically significant *or* insignficant original results and to (ii) original and robustness coefficients that share *or* do not share the same sign. For example, if $I´_{1j}$ is 30\% for results with the same sign and 3\% for results with opposite signs, the remaining 67\% of robustness analysis paths for this outcome are statistically insignificant. The significance levels applied to the original study and the robustness analysis are identical and correspond to the one defined in the robustness analysis.
 
 
-2. The **indicator on non-agreement due to significance definition** is an auxiliary significance agreement indicator that focuses on *classification* reproducibility or replicability of results as defined above. It identifies those originally significant results that have statistically insignificant robustness analysis paths only because a more stringent significance level definition is applied in the robustness analysis than in the original study. The indicator is also expressed in \% and therefore includes the muliplication by 100. 
+2. The **indicator on non-agreement due to significance definition** is an auxiliary significance agreement indicator that focuses on *classification* reproducibility or replicability of results as defined above. It identifies those originally significant results that have statistically insignificant robustness analysis paths only because a more stringent significance level definition is applied in the robustness analysis than in the original study. The indicator is also expressed in \% and therefore includes the muliplication by 100. It requires that the effect sizes of the original and robustness results are measured in the same units.
 
 $$ I´_{2j} = mean(\mathbb{I}(\alpha < pval_i \le \alpha^{orig}_j)) \times 100  \quad  \text{if } \alpha < pval^{orig}_j \le \alpha^{orig}_j $$
 
@@ -171,7 +173,7 @@ $$ I´_{3j}  \text{ not applicable otherwise} $$
 The Sensitivity Dashboard does not include a **relative significance indicator**.
 
 
-4. The **effect size variation indicator** measures the mean absolute deviation of coefficients in robustness analysis paths from their median. Like $I´_{3j}$, it only considers robustness analysis paths for outcomes reported as statistically significant that are (i) statistically significant and (ii) in the same direction as the original result. The mean value is divided by the original coefficient and multiplied by 100 so that it is measured in the same unit as $I´_{3j}$. Here, the $\beta_i$ may incorporate the original result as one robustness analysis path.
+4. The **effect size variation indicator** measures the mean absolute deviation of coefficients in robustness analysis paths from their median. Like $I´_{3j}$, it only considers robustness analysis paths for outcomes reported as statistically significant that are (i) statistically significant and (ii) in the same direction as the original result. The mean value is divided by the original coefficient and multiplied by 100 so that it is measured in the same unit as $I´_{3j}$. Here, the $\beta_i$ may incorporate the original result as one robustness analysis path. The indicator requires that the effect sizes of the original and robustness results are measured in the same units.
 
 $$ I´_{4j} = \frac{mean(\mid \beta_i - median(\beta_i) \mid)}  {\beta^{orig}_j} \times 100  	\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha \land \beta_i \times \beta^{orig}_j \ge 0 $$ 
 
@@ -196,7 +198,7 @@ applied separately to (i) $pval^{orig}_j \le \alpha \land pval_i > \alpha$,
 The *Sensitivity Dashboard* additionally includes the option `extended(string)` to show two types of indicators in an extended set of indicators. 
 
 
-6. The **effect size agreement indicator** measures the share of robustness coefficients that lie inside the bounds of the confidence interval of the original coefficient, $\beta(cilo)^{orig}_j$ and $\beta(ciup)^{orig}_j$. It only considers statistically insignificant robustness analysis paths for outcomes reported as statistically significant in the original study.
+6. The **effect size agreement indicator** measures the share of robustness coefficients that lie inside the bounds of the confidence interval of the original coefficient, $\beta(cilo)^{orig}_j$ and $\beta(ciup)^{orig}_j$. It only considers statistically insignificant robustness analysis paths for outcomes reported as statistically significant in the original study. The indicator requires that the effect sizes of the original and robustness results are measured in the same units.
 
 $$ I´_{6j} = mean(\mathbb{I}(\beta(cilo)^{orig}_j \le \beta_i \le beta(ciup)^{orig}_j)) \times 100 		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i > \alpha $$ 
 
@@ -206,7 +208,7 @@ $$ I´_{6j}  \text{ not applicable otherwise} $$
 > *Interpretation*: An indicator $I´_{6j}$ of 10\% implies that 10\% of robustness analysis paths for this outcome $j$ with originally significant results are insignificant according to the significance level adopted by the robustness analysis, but with robustness coefficients that cannot be rejected to lie inside the confidence interval of the original result. The closer these 10\% are to the share of statistically insignificant robustness analysis paths for this outcome, the less does this indicator confirm the *statistical significance indicator*. For example, if the share of statistically insignificant robustness analysis paths for this outcome is 15\%, two-thirds of these analysis paths are non-confirmatory according to *statistical significance indicator* and confirmatory according to the *effect size agreement indicator*.
 
 
-7. & 8. The **significance switch indicators** include two sub-indicators for originally significant and insignificant results, respectively. For originally significant results, these indicators measure the share of robustness coefficients (standard errors) that are sufficiently small (large) to have turned the result insignificant when standard errors (coefficients) are held at their values in the original study. Whether absolute values of coefficients (standard errors) are sufficiently small (large) is determined based on the threshold values $\beta(tonsig)_j$ and $se(tonsig)_j$.
+7. & 8. The **significance switch indicators** include two sub-indicators for originally significant and insignificant results, respectively. For originally significant results, these indicators measure the share of robustness coefficients (standard errors) that are sufficiently small (large) to have turned the result insignificant when standard errors (coefficients) are held at their values in the original study. Whether absolute values of coefficients (standard errors) are sufficiently small (large) is determined based on the threshold values $\beta(tonsig)_j$ and $se(tonsig)_j$. The indicators require that the effect sizes of the original and robustness results are measured in the same units.
 
 $$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  \le \beta(tonsig)_j) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
 
@@ -222,7 +224,22 @@ $$ I´_{8j} = mean(\mathbb{I}(se_i  < se(tosig)_j) \times 100   		\quad  \text{i
 > *Interpretation*: An indicator $I´_{7j}$ of, for example, 30\% for an outcome $j$ with an originally significant result, implies that 30\% of the robustness analysis paths that are statistically insignificant have coefficients that are sufficiently small for the robustness analysis path to be statistically insignificant even if the standard error would be identical to the one in the original study. The other (sub-)indicators can be interpreted analogously. 
 
 
+The following shows an example of the *Sensitivity Dashboard*, indicating where the indicators outlined above can be found in the figure. Indicators from the extended set are in lighter blue. 
+
+<img width="600" alt="repframe Sensitivity Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ac29ab67-727c-44a6-a0c6-855e99821f60"> &nbsp;
+&nbsp;
+
+<img width="600" alt="repframe Sensitivity Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/b8616f2e-a187-4e38-8144-480998388b40"> &nbsp;
+&nbsp;
+
+
 ## Update log
+
+2024-03-04, v1.4.2:
+
+- Adjust the option `extended` to allow for multiple choices.
+- Extend the application of the significance variation indicator in the Sensitivity Dashboard to originally insignificant results with significant robustness results.
+- Minor revisions of the code.
 
 2024-02-29, v1.4.1:
 
