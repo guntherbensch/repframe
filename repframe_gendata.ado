@@ -32,10 +32,10 @@ program define repframe_gendata
 	qui {
 		*** Set main locals 
 		local panel_list   outcome_vs cov1 cov2 cov3 cov4 ifcond
-		local m_max = 3*(1^1*2^5)
-		local n_max = 12		// # entries for each of the estimation results: outcome - beta_wgt - se_wgt - outcome_mean - N (outcome var) - outcome_vs - cov1 - cov2 - cov3 - cov4 - ifcond - pval_wgt
+		local m_max = 3*(1^1*2^4*3^1)   // 1 decision with 1 choice (outcome_vs), 4 with 2, and 1 with 3 (ifcond)
+		local n_max = 13		// # entries for each of the estimation results: outcome - beta_wgt - se_wgt - outcome_mean - N (outcome var) - df_wgt - outcome_vs - cov1 - cov2 - cov3 - cov4 - ifcond - pval_wgt
 		matrix R = J(`m_max', `n_max', .)   				
-		local R_matrix_col outcome beta_wgt se_wgt outcome_mean_wgt N `panel_list' pval_wgt
+		local R_matrix_col outcome beta_wgt se_wgt outcome_mean_wgt N df_wgt `panel_list' pval_wgt
 		matrix coln R =  `R_matrix_col'
 		
 			
@@ -46,28 +46,28 @@ program define repframe_gendata
 		*** make datset-specific adjustments 
 		
 		** keep necessary data
-		keep strata psu region location age height weight bpsystol bpdiast diabetes finalwgt leadwt vitaminc lead female black orace hsizgp rural loglead highbp highlead
+		keep strata psu region location age height weight bpsystol bpdiast hlthstat diabetes finalwgt leadwt vitaminc lead female black orace hsizgp rural loglead highbp highlead
 
 		** make some random sample restrictions 
-		keep if region==1
-		drop if diabetes==1 & rural==1
+		keep if region==1 | region==2 
 
 		** choose outcomes 
 		rename highlead lead_vs1    
 		*rename lead     lead_vs2 // not used as these alternative outcomes are in different units
 		*rename loglead  lead_vs3
-		rename highbp   bp_vs1
+		*rename highbp   bp_vs1
 		*rename bpdiast  bp_vs2
 		*rename bpsystol bp_vs3
 		rename vitaminc vitaminc_vs1
+		gen hlthstat_vs1 = (hlthstat==1 | hlthstat==2)
 
-		rename finalwgt weight_bp
+		rename finalwgt weight_hlthstat
 		rename leadwt   weight_lead
-		clonevar weight_vitaminc = weight_bp
+		clonevar weight_vitaminc = weight_hlthstat
 
 
 		** run estimations and retrieve estimates
-		foreach outcome in bp lead vitaminc {
+		foreach outcome in hlthstat lead vitaminc {
 			local lastvs 1
 			if "`outcome'"=="vitaminc" {
 				local lastvs 1
@@ -77,7 +77,7 @@ program define repframe_gendata
 					foreach cov2 in "" "height" {
 						foreach cov3 in "" "i.hsizgp" {
 							foreach cov4 in "" "rural" {
-								foreach ifcond in "" "if diabetes!=1 & female!=1" {
+								foreach ifcond in "if region==1" "" "if region==1 & diabetes!=1 & female!=1 & black!=1" {
 									svyset psu [pweight=weight_`outcome'], strata(strata)
 									svy: reg `outcome'_vs`outcome_vs' weight `cov1' `cov2' `cov3' `cov4' i.location `ifcond'
 							
@@ -99,15 +99,18 @@ program define repframe_gendata
 									if  "`cov4'"=="rural" {
 										estadd scalar cov4 = 1, replace
 									}
-									if  "`ifcond'"=="if diabetes!=1 & female!=1" {
+									if  "`ifcond'"=="" {
 										estadd scalar ifcond = 1, replace
+									}
+										if  "`ifcond'"=="if region==1 & diabetes!=1 & female!=1 & black!=1" {
+										estadd scalar ifcond = 2, replace
 									}
 									
 									test weight
 									estadd scalar pval = `r(p)'
 
 									sum `outcome'_vs`outcome_vs' if e(sample)==1   // in this specific example only would actually have to account for svy, e.g. via -svy: mean- 
-									matrix R[`i',1] = `j', _b[weight], _se[weight], r(mean), r(N), e(outcome_vs), e(cov1), e(cov2), e(cov3), e(cov4), e(ifcond), e(pval)
+									matrix R[`i',1] = `j', _b[weight], _se[weight], r(mean), r(N), e(df_r), e(outcome_vs), e(cov1), e(cov2), e(cov3), e(cov4), e(ifcond), e(pval)
 									local i = `i' + 1								
 									
 								}
@@ -124,7 +127,7 @@ program define repframe_gendata
 		svmat R, names(col)
 		keep `R_matrix_col'
 		
-		label define outcome    1 "blood pressure" 2 "blood lead level" 3 "Vitamic C"
+		label define outcome    1 "excellent or very good health status" 2 "blood lead level" 3 "Vitamic C"
 		label val outcome outcome   	
 		
 		egen nmiss=rmiss(*)
@@ -133,7 +136,7 @@ program define repframe_gendata
 
 		*** define original estimate
 			// here (random choice): - outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 -
-		foreach var in beta se pval outcome_mean {
+		foreach var in beta se pval outcome_mean df {
 			bysort outcome:  gen `var'_wgt_orig_x = `var'_wgt if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0
 			bysort outcome: egen `var'_wgt_orig   = mean(`var'_wgt_orig_x)
 		}
@@ -149,6 +152,8 @@ program define repframe_gendata
 		rename se_wgt_orig				se_og  
 		rename pval_wgt					p
 		rename pval_wgt_orig			p_og
+		rename df_wgt					df
+		rename df_wgt_orig				df_og
 	}
 
 end

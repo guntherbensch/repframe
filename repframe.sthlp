@@ -75,11 +75,11 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {syntab:optional parameters related to Sensitivity Dashboard {help repframe##optional_para_SensDash:[+]}}
 {synopt:{opt sensd:ash(0/1)}}create Sensitivity Dashboard{p_end}
 {synopt:{opt vshortref_orig(string)}}very short reference to original study{p_end}
-{synopt:{opt extended(0/1)}}show extended set of Reproducibility and Replicability Indicators in the dashboard{p_end}
+{synopt:{opt extended(string)}}show indicators from extended set of Reproducibility and Replicability Indicators in the dashboard{p_end}
 {synopt:{opt aggregation(0/1)}}show outcomes in the dashboard aggregated across outcomes instead of individually{p_end}
 {synopt:{opt graphfmt(string)}}file format of Sensitivity Dashboard graph{p_end}
 {synopt:{opt ivF(varname)}}first-stage {it:F}-Statistics, if IV/2SLS estimations{p_end}
-{synopt:{opt signfirst(varname)}}share of first stages with wrong sign{p_end}	
+{synopt:{opt signfirst(varname)}}share of first stages with wrong sign{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -93,9 +93,9 @@ of robustness tests - be they reproducibility or replicability analyses - to the
 The command can be applied to calculate indicators across outcomes of a single study or alternatively across studies, the latter requiring the option {cmd:studypooling(1)}.  
 The command produces three outputs: 
 first, a table with the main set of indicators. 
-Second, a Sensitivity Dashboard to visualize a second set of indicators.
+Second, a so-called Sensitivity Dashboard that visualizes a second set of indicators.
 Third - if the analysis is at the study level -, a dataset with study-level indicators that is ready to be re-introduced into the command using the option {cmd:studypooling(1)}.  
-The required data structure and the output data with the different indicators is described in the {help repframe##see_also:online Readme on GitHub}. {p_end}
+The required data structure and the output data with the different indicators is described in the {help repframe##see_also:online Readme on GitHub}.{p_end}
 
 
 {marker options}{...}
@@ -128,40 +128,35 @@ This reference can either be a reference to the original study or to the reprodu
 {phang}
 The command {it:repframe} requires that either both {cmd:pval()} and {cmd:pval_orig()} are specified or both {cmd:se()} and {cmd:se_orig()}
 or both {cmd:zscore()} and {cmd:zscore_orig()}. The command {it:repframe} determines the non-specified variables based on
-the conventional {it:t}-test formula. Importantly, it is recommended to specify both the information on {it:p}-values and standard errors,
-because the application of this formula may not be appropriate in all cases.
-For example, when the original estimations accounted for sampling weights (pweights) using the command {cmd:svy:},
-{it:p}-values will not be correctly derived using that formula (see the {help repframe##examples:examples}). 
+the {it:t}-test formula and making assumptions on normality of the data, which may not be appropriate in all cases.
+It is therefore recommended to specify both the information on {it:p}-values and standard errors
+(see also the discussion on defaults applied by the command {it:repframe} in the {help repframe##see_also:online Readme on GitHub}).
 
 {phang}
 {opt pval(varname)} specifies the variable {it:varname} that includes the {it:p}-values on statistical significance of estimates in analysis paths
 of robustness tests; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval()} is not specified,
-it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:zscore()} using the conventional {t}-test formula.
+it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:zscore()}.
 
 {phang}
 {opt pval_orig(varname)} specifies the variable {it:varname} that includes the {it:p}-value on statistical significance of the original estimate
 for the respective outcome; {it:p}-values are assumed to be derived from two-sided {it:t}-tests; if {cmd:pval_orig()} is not specified,
-it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()} using the conventional {t}-test formula.
+it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()}.
 
 {phang}
 {opt se(varname)} specifies the variable {it:varname} that includes the standard errors of beta coefficients in analysis paths of robustness tests;
-if {cmd:se()} is not specified, it is calculated based on {cmd:beta()} and {cmd:pval()}
-or {cmd:beta()} and {cmd:zscore()} using the conventional {t}-test formula. 
+if {cmd:se()} is not specified, it is calculated based on {cmd:beta()} and {cmd:pval()} or {cmd:beta()} and {cmd:zscore()}. 
 
 {phang}
 {opt se_orig(varname)} specifies the variable {it:varname} that includes the standard errors of the original beta coefficient for the respective outcome;
-if {cmd:se_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:pval_orig()}
-or {cmd:beta_orig()} and {cmd:zscore_orig()} using the conventional {t}-test formula.
+if {cmd:se_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:pval_orig()} or {cmd:beta_orig()} and {cmd:zscore_orig()}.
 
 {phang}
 {opt zscore(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} scores of estimates in analysis paths of robustness tests;
-if {cmd:zscore()} is not specified, it is calculated based on {cmd:beta()} and {cmd:se()}
-or {cmd:beta()} and {cmd:pval()} using the conventional {t}-test formula.
+if {cmd:zscore()} is not specified, it is calculated based on {cmd:beta()} and {cmd:se()} or {cmd:beta()} and {cmd:pval()}.
 
 {phang}
 {opt zscore_orig(varname)} specifies the variable {it:varname} that includes the {it:t}/{it:z} score of the original estimate for the respective outcome;
-if {cmd:zscore_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} 
-or {cmd:beta_orig()} and {cmd:pval_orig()} using the conventional {t}-test formula.
+if {cmd:zscore_orig()} is not specified, it is calculated based on {cmd:beta_orig()} and {cmd:se_orig()} or {cmd:beta_orig()} and {cmd:pval_orig()}.
 
 
 {marker optional_para}{...}
@@ -271,8 +266,9 @@ default is {cmd:sensdash(1)}.
 default is {cmd vshortref_orig("original estimate")}. This reference is included in the Sensitivity Dashboard.
 
 {phang}
-{opt extended(0/1)} is a binary indicator on whether to show the extended set of Reproducibility and Replicability Indicators in the dashboard (yes=1, no=0);
-default is {cmd:extended(0)}.
+{opt extended(string)} provides the type of indicator from the extended set of Reproducibility and Replicability Indicators that is to be shown in the dashboard;
+the options are "none" (no indicator from the extended set), "ESagree" (Effect size agreement indicator) "SIGswitch" (Significance switch indicator),
+or "both" (both indicators); default is {cmd:extended("none")}.
 
 {phang}
 {opt aggregation(0/1)} is a binary indicator on whether to show outcomes in the dashboard individually (=0) or aggregated across outcomes (=1);
@@ -302,12 +298,37 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {p 8 12}({stata "repframe_gendata":{it:click to generate multiverse dataset}}){p_end}
 
 {phang}	
-{bf:Reproducibility and Replicability Indicators and Sensitivity Dashboard}
+{bf:Reproducibility and Replicability Indicators table and Sensitivity Dashboard #1}
 
-{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)  mean(out_mn) mean_orig(out_mn_og)"}{p_end}
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)"}{p_end}
 
 {p 8 12}
 [{it:note that this example requires that the output table can be stored in the operating system's standard /Downloads folder. If this does not work, specify the file location with the option} {cmd:filepath(string)}.]{p_end}
+
+{phang}	
+{bf:Same output as #1, now based on information on the degrees of freedom instead of {it:p}-values}
+
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) df(df) df_orig(df_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)"}{p_end}
+
+{phang}	
+{bf:Variation of #1, now including information in the Dashboard on the deviation of the original results from their mean}
+
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)  mean(out_mn) mean_orig(out_mn_og)"}{p_end}
+
+{phang}	
+{bf:Same table output as #1, Dashboard now with the extended set of indicators}
+
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)  extended(both)"}{p_end}
+
+{phang}	
+{bf:Same table output as #1, Dashboard now on aggregated outcomes}
+
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)  aggregation(1)"}{p_end}
+
+{phang}	
+{bf:Variation of #1, now including the original estimate in the multiverse of robustness analysis paths}
+
+{p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex) orig_in_multiverse(1)"}{p_end}
 
 
 {marker references}{...}
