@@ -1839,7 +1839,7 @@ qui {
 
 
 *** Display figure note
-		noi dis _newline(1)	"Sensitivity Dasboard stored under `filepath'/repframe_sensdash_`fileidentifier'.`graphfmt'"
+		noi dis _newline(1)	"Sensitivity Dasboard stored under `filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'"
 		noi dis _newline(1)	"Dashboard shows `notes_shares_shown' - `notes_spec' `notes_sigdef'"
 		noi dis _newline(1)	"`=ustrunescape("\u03B2")' = beta coefficient"
 		noi dis				"`=ustrunescape("\u03B2\u0303")' = median beta coefficient of reproducability or replicability analysis, measured as % deviation from original beta coefficient; generally, tildes indicate median values"
