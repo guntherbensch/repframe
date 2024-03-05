@@ -290,12 +290,12 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {title:Examples}
 
 {phang}	
-{bf:Data preparation}
+{bf:Data preparation for analyses at study level}
 
 {p 8 12}. {stata "use http://www.stata-press.com/data/mus2/mus206nhanes.dta"}{p_end}
 {p 8 12}(Data from the second US National health and Nutrition Examination Survey (NHANES II), 1976-1980){p_end}
 
-{p 8 12}({stata "repframe_gendata":{it:click to generate multiverse dataset}}){p_end}
+{p 8 12}({stata "repframe_gendata, studypooling(0)":{it:click to generate multiverse dataset at study level}}){p_end}
 
 {phang}	
 {bf:Reproducibility and Replicability Indicators table and Sensitivity Dashboard #1}
@@ -329,6 +329,22 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {bf:Variation of #1, now including the original estimate in the multiverse of robustness analysis paths}
 
 {p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex) orig_in_multiverse(1)"}{p_end}
+
+
+{phang}	
+{bf:Data preparation for analyses across studies}
+
+{p 8 12}({stata "repframe_gendata, studypooling(1)":{it:click to generate illustrative study-level indicator data}}){p_end}
+
+{phang}	
+{bf:Reproducibility and Replicability Indicators table and Sensitivity Dashboard #2 (across studies)}
+
+{p 8 12}. {stata "repframe reflist, studypooling(1)"}
+
+{phang}	
+{bf:Same table output as #2, Dashboard now with the extended set of indicators}
+
+{p 8 12}. {stata "repframe reflist, studypooling(1) extended(both)"}
 
 
 {marker references}{...}

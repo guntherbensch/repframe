@@ -1,10 +1,10 @@
-*! version 1.4.2  4mar2024 Gunther Bensch
+*! version 1.5  5mar2024 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
 *** PURPOSE:	
 	This Stata do-file contains the program repframe to calculate, tabulate and visualize Reproducibility and Replicability Indicators based on multiverse analyses.
-	repframe requires version 12.0 of Stata or newer.
+	repframe requires version 14.0 of Stata or newer.
 
 	
 *** OUTLINE:	PART 1.  INITIATE PROGRAM REPFRAME
@@ -36,7 +36,10 @@
 	oa    - original analyis OR original author(s)
 	osig  - significant in original study
 	onsig - insignificant in original study
+	out   - outcome level
 	ra    - reproducibility or replicability analysis
+	RF    - Reproducibility and replicability Framework indicators
+	stud  - study level
 	x_    - temporary variables
 */	
 
@@ -72,7 +75,7 @@ SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggreg
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.4.2  4mar2024"
+	local repframe_vs  "version 1.5  5mar2024"
 
 *** Preserve initial dataset 
 	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not ossible) as different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
@@ -781,8 +784,7 @@ qui {
 				local spec_`x' "multiple studies"
 			}
 		}
-		drop outcomes_N siglevel_ra_stud siglevel_oa_stud osig_oa_out_N onsig_oa_out_N osig_ra_out_N  onsig_ra_out_N   analysispaths_min_N analysispaths_max_N  ivarweight_stud_d  // information transferred to locals
-		drop beta beta_orig  // empty variables that were only inputted to be able to run the command	
+		drop outcomes_N siglevel_ra_stud siglevel_oa_stud osig_oa_out_N onsig_oa_out_N osig_ra_out_N  onsig_ra_out_N   analysispaths_min_N analysispaths_max_N  ivarweight_stud_d  // information transferred to locals	
 		drop pval_orig_*   // drop variables not required for the Indicator construction
 		capture drop __000000 __000001   // sometimes temporary variables are created by marksample command above
 	}
@@ -971,14 +973,14 @@ qui {
 
 
 		** A7+. Significance switch - alternative indicator set
-			// not for beta2_orig_j==1 | beta2_i==1	
-						  gen x_RF2_SIGsw_btonsig_i  = (abs(`beta')<=beta_abs_orig_p`sigdigits_ra'_j)*100	if pval_i>0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==.	// multiples of 0.1 cannot be held exactly in binary in Stata -> shares converted to range from 1/100, not from 0.01 to 1.00
-						  gen x_RF2_SIGsw_setonsig_i = (se_i>=se_orig_p`sigdigits_ra'_j)*100				if pval_i>0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==.
+			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1	
+						  gen x_RF2_SIGsw_btonsig_i  = (abs(`beta')<=beta_abs_orig_p`sigdigits_ra'_j)*100	if pval_i>0.`sigdigits_ra' & sameunits_i==1 & beta2_orig_j==. & beta2_i==.	// multiples of 0.1 cannot be held exactly in binary in Stata -> shares converted to range from 1/100, not from 0.01 to 1.00
+						  gen x_RF2_SIGsw_setonsig_i = (se_i>=se_orig_p`sigdigits_ra'_j)*100				if pval_i>0.`sigdigits_ra' & sameunits_i==1 & beta2_orig_j==. & beta2_i==.
 		bysort mainlist: egen   RF2_SIGsw_btonsig_j  = mean(x_RF2_SIGsw_btonsig_i)
 		bysort mainlist: egen   RF2_SIGsw_setonsig_j = mean(x_RF2_SIGsw_setonsig_i)
 				
-						  gen x_RF2_SIGsw_btosig_i  = (abs(`beta')>beta_abs_orig_p`sigdigits_ra'_j)*100		if beta_dir_i==beta_orig_dir_j & pval_i<=0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==.
-						  gen x_RF2_SIGsw_setosig_i = (se_i<se_orig_p`sigdigits_ra'_j)*100					if beta_dir_i==beta_orig_dir_j & pval_i<=0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==.
+						  gen x_RF2_SIGsw_btosig_i  = (abs(`beta')>beta_abs_orig_p`sigdigits_ra'_j)*100		if pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j & sameunits_i==1 & beta2_orig_j==. & beta2_i==.
+						  gen x_RF2_SIGsw_setosig_i = (se_i<se_orig_p`sigdigits_ra'_j)*100					if pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j & sameunits_i==1 & beta2_orig_j==. & beta2_i==.
 		bysort mainlist: egen   RF2_SIGsw_btosig_j  = mean(x_RF2_SIGsw_btosig_i)
 		bysort mainlist: egen   RF2_SIGsw_setosig_j = mean(x_RF2_SIGsw_setosig_i)
 
@@ -1050,7 +1052,7 @@ qui {
 			save `data_pooled_k'
 		restore
 
-		order mainlist mainlist_str `RF_list_osig_oa_k' `RF2_list_osig_ra_k' RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all 
+		order mainlist mainlist_str `RF_list_osig_oa_k' `RF2_list_osig_ra_k' RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all 
 
 		rename *_osig_oa_all  *1
 		rename *_onsig_oa_all *2
@@ -1058,7 +1060,7 @@ qui {
 		rename *_onsig_ra_all *4
 		
 		
-		reshape long `RF_list_nosfx' `RF2_osig_list_nosfx' RF2_SIGagr_sigdef RF2_SIGsw_btosig RF2_SIGsw_setosig, i(mainlist) j(level)
+		reshape long `RF_list_nosfx' `RF2_osig_list_nosfx' RF2_SIGagr_sigdef RF2_SIGvar_sig RF2_SIGsw_btosig RF2_SIGsw_setosig, i(mainlist) j(level)
 		
 		** if pooled across studies, the reference for statistical significance differs between oa and rep
 		gen     pval_orig_oa = 0.`sigdigits_oa' - 0.01 if level==1 		// originally sig outcomes have pval below 0.`sigdigits_oa' -> used to distinguish indicators below
@@ -1367,10 +1369,12 @@ qui {
 		use `data_j'
 		if `studypooling'==0 {
 			keep mainlist mainlist_str beta_orig_j beta_rel_orig_j pval_orig_j RF2_* rany* 
+			local ind_level out
 		}
 		else {
 			rename pval_orig_ra_j pval_orig_j
 			keep mainlist mainlist_str pval_orig_j RF2_* rany*
+			local ind_level stud
 		}
 
 *** Prepare data structure and y- and x-axis
@@ -1783,7 +1787,7 @@ qui {
 			graphregion(color(white)) scheme(white_tableau)  
 				// first line of this twoway command does not show up in the dashboard but is required to make the legend show up with the correct colours 
 			
-		graph export "`filepath'/repframe_sensdash_`fileidentifier'.`graphfmt'", replace
+		graph export "`filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'", replace
 
 	
 			
@@ -2024,7 +2028,8 @@ qui {
 
 	export excel "`filepath'/repframe_indicators_`ind_level'_`fileidentifier'.csv", firstrow(varlabels) replace
 	noi dis _newline(1)	"Reproducibility and Replicability Indicators table stored under `filepath'/repframe_indicators_`ind_level'_`fileidentifier'.csv"
-
+	noi dis _newline(2)
+	
 	use `inputdata', clear
 }	
 end

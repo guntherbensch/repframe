@@ -1,4 +1,4 @@
-# REPFRAME v1.4.2
+# REPFRAME v1.5
 
 This is a Stata package to calculate, tabulate and visualize Reproducibility and Replicability Indicators. These indicators compare estimates from a multiverse of analysis paths of a robustness analysis &mdash; be they reproducibility or replicability analyses &mdash; to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works.  
 
@@ -13,7 +13,8 @@ help repframe
 ```
 for the syntax and the whole range of options.
 
-As shown in the figure below and described in the following, the `repframe` command can be applied both to derive indicators at the level of individual studies and to pool these indicators across studies. At both levels, the command produces two outputs, a table with the main set of indicators (*Reproducibility and Replicability Indicators table*) as .csv file and a so-called *Sensitivity Dashboard* that visualizes a second set of indicators. At the study level, the command additionally produces as third output *study-level indicator data* as a Stata .dta file that is ready to be re-introduced into the command to calculate the indicators across studies.  
+As shown in the figure below and described in the following, the `repframe` command can be applied both to derive indicators at the level of individual studies and to pool these indicators across studies. At both levels, the command produces two outputs, a table with the main set of indicators (*Reproducibility and Replicability Indicators table*) as .csv file and a so-called *Sensitivity Dashboard* that visualizes a second set of indicators. At the study level, the command additionally produces a Stata .dta file as a third output. This *study-level indicator data* is ready to be re-introduced into the command to calculate the indicators across studies.  
+
 <img width="800" alt="repframe outputs" src="https://github.com/guntherbensch/repframe/assets/128997073/bd1c5852-355b-427d-9c4e-963aa7d39333"> &nbsp;
 
 
@@ -22,11 +23,11 @@ As shown in the figure below and described in the following, the `repframe` comm
 
 The `repframe` command applies a few default assumptions. Use the following options in case your analysis makes different assumptions. 
 
-<ins>Tests for statistical significance</ins>: The command applies two-sided *t*-tests to define which *p*-values imply statistical significance. These tests may apply different significance levels to the original results (`siglevel_orig(#)`) and to the robustness results (`siglevel(#)`). If the related *p*-values inputted via the options `pval(varname)` and `pval_orig(varname)` are based on one-sided tests, these *p*-values need to be multiplied by two so as to make them correspond to a two-sided test. If no information on *p*-values is available, the command derives the missing *p*-value information applying the *t*-test formula. Depending on which additional information is available, this may done based on *t*/*z*-scores (`zscore(varname)` and `zscore_orig(varname)`), on standard errors (`se(varname)` and `se_orig(varname)`) and degrees of freedom (`df(varname)` and `df_orig(varname)`), or on standard errors assuming a normal distribution. Remember that the latter may not always be appropriate, for example with small samples or when estimations have few degrees of freedom because they account for survey sampling, e.g. via the Stata command `svy:`. Conversely, if input data on *p*-values is based on other distributional assumptions than normality, the formula may not correctly derive standard errors. It is therefore recommended to specify both the information on *p*-values and on standard errors, and to consider the implications if non-normality is assumed in either the original or robustness analysis. 
+<ins>Tests for statistical significance</ins>: The command applies two-sided *t*-tests to define which *p*-values imply statistical significance. These tests may apply different significance levels to the original results (`siglevel_orig(#)`) and to the robustness results (`siglevel(#)`). If the related *p*-values retrieved via the options `pval(varname)` and `pval_orig(varname)` are based on one-sided tests, these *p*-values need to be multiplied by two so as to make them correspond to a two-sided test. If no information on *p*-values is available, the command derives the missing *p*-value information applying the *t*-test formula. Depending on which additional information is available, this may be done based on *t*/*z*-scores (`zscore(varname)` and `zscore_orig(varname)`), on standard errors (`se(varname)` and `se_orig(varname)`) and degrees of freedom (`df(varname)` and `df_orig(varname)`), or on standard errors assuming a normal distribution. Remember that the latter may not always be appropriate, for example with small samples or when estimations have few degrees of freedom because they account for survey sampling, e.g. via the Stata command `svy:`. Conversely, if input data on *p*-values is based on other distributional assumptions than normality, the formula may not correctly derive standard errors. It is therefore recommended to specify both the information on *p*-values and on standard errors, and to consider the implications if non-normality is assumed in either the original or robustness analysis. 
 
 <ins>Units in which effect sizes are measured</ins>: The command assumes that effect sizes of original results and robustness results are measured in the same unit. If this is not the case, for example because one is measured in log terms and the other is not, use the option `sameunits(varname)`. This option requires a numerical variable **varname** containing the observation-specific binary information on whether the two are measured in the same unit (1=yes) or not (0=no).
 
-<ins>Original analysis to be included as one robustness analysis path</ins>: The command assumes that the original analysis is not to be included as one analysis path in the multiverse robustness analysis. Otherwise specify the option `orig_in_multiverse(1)`. Then, the original result is incorporated in the computation of the two [variation indicators](#the-reproducibility-and-replicability-indicators). Irrespective of whether the original analysis is included as one robustness analysis path or not, the dataset should only include the information on the original analysis in the variables inputted via the options ending with *_orig*, and not as a separate robustness analysis path.
+<ins>Original analysis to be included as one robustness analysis path</ins>: The command assumes that the original analysis is not to be included as one analysis path in the multiverse robustness analysis. Otherwise specify the option `orig_in_multiverse(1)`. Then, the original result is incorporated in the computation of the two [variation indicators](#the-reproducibility-and-replicability-indicators). Irrespective of whether the original analysis is included as one robustness analysis path or not, the dataset should only include the information on the original analysis in the variables imported via the options ending with *_orig*, and not as a separate robustness analysis path.
 
 
 ## Required input data structure 
@@ -36,7 +37,7 @@ The `repframe` command applies a few default assumptions. Use the following opti
 The input data at study level needs to be in a specific format for `repframe` to be able to calculate the indicators and dashboards. Each observation should represent one analysis path, that is the combination of analytical decisions in the multiverse robustness analysis. 
 In the toy example with one main outcome represented in the below figure, two alternative choices are assessed for one analytical decision (**analytical_decision_1**, e.g. a certain adjustment of the outcome variable) and three alternative choices are assessed for two other analytical decision (**analytical_decision_2** and **analytical_decision_3**, e.g. the set of covariates and the sample used). This gives a multiverse of 3^2*2^1 = 18 analysis paths, if all combinations are to be considered. The number of observations is therefore 18 in this example.
 
-For each observation, the minimum requirement is that the variable **mainlist** (this is the outcome at the study level) is defined together with the coefficient information inputted via the options `beta(varname)` and `beta_orig(varname)` and information to determine statistical significance. It is recommended to specify both the information on *p*-values and on standard errors, as outlined above in the sub-section on defaults applied by the `repframe` command. As noted in that same sub-section, the dataset should furthermore not include observations with information on the original analysis as robustness analysis paths but only in the variables inputted via the options ending with *_orig*. Also note that the variable **mainlist** should be numeric with value labels.
+For each observation, the minimum requirement is that the variable **mainlist** (this is the outcome at the study level) is defined together with the coefficient information retrieved via the options `beta(varname)` and `beta_orig(varname)` and information to determine statistical significance. It is recommended to specify both the information on *p*-values and on standard errors, as outlined above in the sub-section on defaults applied by the `repframe` command. As noted in that same sub-section, the dataset should furthermore not include observations with information on the original analysis as robustness analysis paths but only in the variables imported via the options ending with *_orig*. Also note that the variable **mainlist** should be numeric with value labels.
 
 <img width="800" alt="toy example of repframe multiverse input data structure" src="https://github.com/guntherbensch/repframe/assets/128997073/81821432-de86-4bea-b0a8-66f8515c2508"> &nbsp;
 
@@ -69,14 +70,14 @@ For tests of replicability using new data or alternative research designs, more 
 The indicators are meant to inform about the following three pieces of information on reproducibility and replicability, related to either statistical significance or effect sizes:
 - <ins>agreement indicators</ins>: Can original and robustness results be considered to have the same statistical significance (effect size)?
 - <ins>relative indicators</ins>: To what extent does the statistical significance (do the effect sizes) of the original results differ from those of the robustness results?
-- <ins>variation indicators</ins>: To what extent do the robustness tests vary among each other in terms of statistical significance (effect sizes)? 
+- <ins>variation indicators</ins>: To what extent do the robustness results vary among each other in terms of statistical significance (effect sizes)? 
 
 The *Sensitivity Dashboard* additionally includes the option `extended(string)`, which allows incorporating a
 - <ins>significance switch indicator</ins>: To what extent are robustness coefficients (standard errors) large (small) enough to have turned an originally insignificant result significant, regardless of the associated standard error (coefficient)? And what about the reverse for originally significant results?   
 
 ### Reproducibility and Replicability Indicators table
 
-The following describes the main indicators presented in the *Reproducibility and Replicability Indicators table* as they are computed at the level of each assessed outcome within a single study. Aggregation across outcomes at the study level is simply done by averaging the indicators as computed at outcome level, separately for outcomes reported as originally significant and outcomes reported as originally insignificant. Similarly, aggregation across studies is simply done by averaging the indicators as computed at study level.  
+The following describes the main indicators presented in the *Reproducibility and Replicability Indicators table* as they are computed at the level of each assessed outcome within a single study. Aggregation across outcomes at the study level is simply done by averaging the indicators as computed at outcome level, separately for outcomes reported as originally significant and outcomes reported as originally insignificant. Similarly, aggregation across studies is simply done by averaging the indicators as computed at study level. An example of a *Reproducibility and Replicability Indicators table* at study level is provided at the end of this section.
 
 1. The **statistical significance indicator** as a significance agreement indicator measures for each outcome $j$ the share of the $n$ robustness analysis paths $i$ that are reported as statistically significant or insignificant in both the original study and the robustness analysis. Accordingly, the indicator is computed differently for outcomes where the original results were reported as statistically significant and those where the original results were found to be statistically insignificant. Statistical significance is defined by a two-sided test with $\alpha^{orig}$ being the significance level applied in the original study and $\alpha$ being the significance level applied in the robustness analysis. For statistically significant original results, the effects of the robustness analysis paths must also be in the same direction as the original result, as captured by coefficients having the same sign or, expressed mathematically, by $\mathbb{I}(\beta_i \times \beta^{orig}_j \ge 0)$.
 
@@ -84,8 +85,8 @@ $$ I_{1j} = mean(\mathbb{I}(pval_i \le \alpha) \times \mathbb{I}(\beta_i \times 
 
 $$ I_{1j} = mean(\mathbb{I}(pval_i > \alpha))  \quad  \text{if } pval^{orig}_j > \alpha^{orig} $$
   
-:point_right: This percentage indicator is intended to capture whether statistical significance in a robustness analysis confirms statistical significance in an original study. The indicator reflects a combination of *technical* robustness of results (are estimates robust in terms of achieving a certain level of statistical significance?) and *classification* robustness (is the classification as statically significant robust to a potentially more (or less) demanding level of statistical significance?).  
-> *Interpretation*: An indicator $I_{1j}$ of 0.3 for an outcome $j$ reported as statistically significant in the original study, for example, implies that 30\% of robustness analysis paths for this outcome (i) are statistically significant according to the significance level adopted in the robustness analysis, and (ii) that their coefficients share the same sign as the coefficient in the original study. Conversely, 70\% of robustness analysis paths for this outcome are most likely statistically insignificant, while it cannot be excluded that part of these paths are statistically significant but in the opposite direction. Note also that robustness analysis paths for this outcome may be found statistically ingnificant &mdash; and thus non-confirmatory &mdash; only because of a stricter significance level adopted in the robustness analysis compared to the original study. An indicator of 0.3 for outcomes reported as statistically insignificant in the original study implies that 30\% of robustness test analysis paths for this outcome are also statistically insignificant according to the significance level adopted in the robustness analysis. Now, the remaining 70\% of robustness analysis paths are statistically significant (most likely with the same sign), while a less strict significance level applied in the robustness analysis could now affect this indicator.   
+:point_right: This share indicator is intended to capture whether statistical significance in a robustness analysis confirms statistical significance in an original study. The indicator reflects a combination of *technical* robustness of results (are estimates robust in terms of achieving a certain level of statistical significance?) and *classification* robustness (is the classification as statically significant robust to a potentially more (or less) demanding level of statistical significance?).  
+> *Interpretation*: An indicator $I_{1j}$ of 0.3 for an outcome $j$ reported as statistically significant in the original study, for example, implies that 30\% of robustness analysis paths for this outcome (i) are statistically significant according to the significance level adopted in the robustness analysis, and (ii) that their coefficients share the same sign as the coefficient in the original study. Conversely, 70\% of robustness analysis paths for this outcome are most likely statistically insignificant, while it cannot be excluded that part of these paths are statistically significant but in the opposite direction. Note also that robustness analysis paths for this outcome may be found statistically ingnificant &mdash; and thus non-confirmatory &mdash; only because of a stricter significance level adopted in the robustness analysis compared to the original study. An indicator of 0.3 for outcomes reported as statistically insignificant in the original study implies that 30\% of robustness analysis paths for this outcome are also statistically insignificant according to the significance level adopted in the robustness analysis. Now, the remaining 70\% of robustness analysis paths are statistically significant (most likely with the same sign), while a less strict significance level applied in the robustness analysis could now affect this indicator.   
 
 
 2. The **relative effect size indicator**  measures the mean of the coefficients $\beta_i$ of all robustness analysis paths for each outcome $j$ divided by the original coefficient $\beta^{orig}_j$. The indicator requires that the effect sizes of the original and robustness results are measured in the same units. It is furthermore only applied to outcomes reported as statistically significant in the original study, now &mdash; and for the following indicators as well &mdash; irrespective of whether in the same direction or not.
@@ -129,6 +130,7 @@ applied separately to $pval^{orig}_j \le \alpha^{orig}$ and $pval^{orig}_j > \al
 > *Interpretation*: $I_{5j}$ simply reports the standard deviation of *t*/*z*-values of all the robustness analysis paths for outcome $j$ as a measure of variation in statistical significance. Higher values indicate higher levels of variation.
 
 The following shows an example of the *Reproducibility and Replicability Indicators table*, indicating the five indicators as outlined above.
+
 <img width="600" alt="repframe indicators table example" src="https://github.com/guntherbensch/repframe/assets/128997073/24f31cc0-87b4-42bf-8446-621e22db3fe5"> &nbsp;
 &nbsp;
 
@@ -137,7 +139,7 @@ The following shows an example of the *Reproducibility and Replicability Indicat
 
 A general difference to the indicators included in the *Reproducibility and Replicability Indicators table* is that the same level of statistical significance is applied to original and robustness results. The motivation is to separate *technical* and *classification* reproducibility or replicability of results as defined above and outlined in the description of the first two indicators. 
 
-In the same vein as for indicators presented in the *Reproducibility and Replicability Indicators table*, aggregation across outcomes at the study level (across studies) is simply done by averaging the indicators as computed at outcome (study) level, separately for outcomes reported as originally significant and outcomes reported as originally insignificant.
+In the same vein as for indicators presented in the *Reproducibility and Replicability Indicators table*, aggregation across outcomes at the study level (across studies) is simply done by averaging the indicators as computed at outcome (study) level, separately for outcomes reported as originally significant and outcomes reported as originally insignificant. An example of a *Sensitivity Dashboard* at study level is provided at the end of this section.
 
 1. The **significance agreement indicator** is derived for each outcome $j$ in a similar way as the *statistical significance indicator* from the *Reproducibility and Replicability Indicators table*. The only differences are that (i) the indicator is the same for statistically significant and insignificant robustness results and that (ii) the same significance level $\alpha$ is applied to the original results and to the robustness results. The indicator is expressed in \% of all robustness results on either statistically significant or insignificant original results and, hence, additionally multiplied by 100.
 
@@ -210,35 +212,42 @@ $$ I´_{6j}  \text{ not applicable otherwise} $$
 
 7. & 8. The **significance switch indicators** include two sub-indicators for originally significant and insignificant results, respectively. For originally significant results, these indicators measure the share of robustness coefficients (standard errors) that are sufficiently small (large) to have turned the result insignificant when standard errors (coefficients) are held at their values in the original study. Whether absolute values of coefficients (standard errors) are sufficiently small (large) is determined based on the threshold values $\beta(tonsig)_j$ and $se(tonsig)_j$. The indicators require that the effect sizes of the original and robustness results are measured in the same units.
 
-$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  \le \beta(tonsig)_j) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
+$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  \le \beta(tonsig)_j)) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
 
-$$ I´_{8j} = mean(\mathbb{I}(se_i  \ge se(tonsig)_j) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
+$$ I´_{8j} = mean(\mathbb{I}(se_i  \ge se(tonsig)_j)) \times 100   		\quad  \text{if } pval^{orig}_j > \alpha \land pval_i > \alpha $$ 
 
 The indicators for originally insignificant results are a mirror image of those for originally significant results: now the indicators measure the shares of robustness coefficients (standard errors) that are sufficiently large (small) to have turned results significant, applying threshold values $\beta(tosig)_j$ and $se(tosig)_j$, respectively.   
 
-$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  > \beta(tosig)_j) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
+$$ I´_{7j} = mean(\mathbb{I}(\mid \beta_i \mid  > \beta(tosig)_j)) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
 
-$$ I´_{8j} = mean(\mathbb{I}(se_i  < se(tosig)_j) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
+$$ I´_{8j} = mean(\mathbb{I}(se_i  < se(tosig)_j)) \times 100   		\quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha $$ 
 
 :point_right: These percentage indicators are intended to capture the drivers behind changes in statistical significance between original study and robustness analysis.
 > *Interpretation*: An indicator $I´_{7j}$ of, for example, 30\% for an outcome $j$ with an originally significant result, implies that 30\% of the robustness analysis paths that are statistically insignificant have coefficients that are sufficiently small for the robustness analysis path to be statistically insignificant even if the standard error would be identical to the one in the original study. The other (sub-)indicators can be interpreted analogously. 
 
 
-The following shows an example of the *Sensitivity Dashboard*, indicating where the indicators outlined above can be found in the figure. Indicators from the extended set are in lighter blue. 
+The following shows an example of the *Sensitivity Dashboard*, indicating where the indicators outlined above can be found in the figure. Indicators from the extended set are in lighter blue. The vertical axis of the dashboard shows individual outcomes, grouped into statistically significant and insignificant if aggregated. Note that this grouping may differ from the one in the *Reproducibility and Replicability Indicators table*, because that table applies to original results the significance level defined by original authors, whereas the dashboard applies the same significance level as adopted in the robustness analysis. The horizontal axis distinguishes between statistically significant and insignificant robustness results, additionally differentiating between statistically significant results in the same and in opposite direction. Circle sizes illustrate $I´_{1j}$, the *significance agreement indicator*. They are coloured in either darker blue for confirmatory results or in lighter blue for non-confirmatory results. As can be seen with Outcome 3 in the figure, this colouring also discriminates $I´_{1j}$ from $I´_{2j}$, the *indicator on non-agreement due to significance definition*.
 
-<img width="600" alt="repframe Sensitivity Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ac29ab67-727c-44a6-a0c6-855e99821f60"> &nbsp;
+<img width="700" alt="repframe Sensitivity Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ac29ab67-727c-44a6-a0c6-855e99821f60"> &nbsp;
 &nbsp;
 
-<img width="600" alt="repframe Sensitivity Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/b8616f2e-a187-4e38-8144-480998388b40"> &nbsp;
+<img width="700" alt="repframe Sensitivity Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/b8616f2e-a187-4e38-8144-480998388b40"> &nbsp;
 &nbsp;
 
 
 ## Update log
 
+2024-03-05, v1.5:
+
+- Remove minor bugs occuring with `studypooling(1)`.
+- Clarify that `repframe` only works with Stata 14.0 or higher.
+- Introduce option `studypooling` to `repframe_genadd` command and include illustrative example on pooling across studies in Stata help file. 
+
 2024-03-04, v1.4.2:
 
 - Adjust the option `extended` to allow for multiple choices.
 - Extend the application of the significance variation indicator in the Sensitivity Dashboard to originally insignificant results with significant robustness results.
+- Add examples to the Stata help file.
 - Minor revisions of the code.
 
 2024-02-29, v1.4.1:
@@ -252,8 +261,8 @@ The following shows an example of the *Sensitivity Dashboard*, indicating where 
 - Additional effect size agreement / confidence interval coverage indicator and additional notes to Sensitivity Dashboard and Reproducibility and Replicability Indicators table.
 - Produce Reproducibility and Replicability Indicators table for indicators pooled across studies.
 - Remove certain requirements to the input data formatting.
-- Us NHANES II data for the example in the help file, among others to have multiple outcomes that effectively differ from each other. 
-- Revise entire command structure and uniform naming convention.
+- Use NHANES II data for the example in the help file, among others to have multiple outcomes that effectively differ from each other. 
+- Revise entire command structure and adopt uniform naming convention.
 
 2024-02-13, v1.3.1:
 
