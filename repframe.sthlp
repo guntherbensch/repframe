@@ -62,6 +62,7 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {synopt:{opt ivarw:eight(0/1)}}show Reproducibility and Replicability Indicators across all outcomes weighted by the inverse variance{p_end}
 
 {syntab:optional parameters related to table of Reproducibility and Replicability Indicators {help repframe##optional_para_RRI:[+]}}
+{synopt:{opt tabfmt(string)}}file format of Reproducibility and Replicability Indicators table{p_end}
 {synopt:{opt shelvedind(0/1)}}shelved Reproducibility and Replicability Indicators to be additionally shown{p_end}
 {synopt:{opt beta2(varname)}}second beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt pval2(varname)}}{it:p}-values on second estimates in analysis paths of robustness tests{p_end}
@@ -92,9 +93,9 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 of robustness tests - be they reproducibility or replicability analyses - to the original estimate(s).
 The command can be applied to calculate indicators across outcomes of a single study or alternatively across studies, the latter requiring the option {cmd:studypooling(1)}.  
 The command produces three outputs: 
-first, a table with the main set of indicators. 
-Second, a so-called Sensitivity Dashboard that visualizes a second set of indicators.
-Third - if the analysis is at the study level -, a dataset with study-level indicators that is ready to be re-introduced into the command using the option {cmd:studypooling(1)}.  
+first, a table with the main set of indicators ({it:Reproducibility and Replicability Indicators table}). 
+Second, a so-called {it:Sensitivity Dashboard} that visualizes a second set of indicators.
+Third - if the analysis is at the study level -, a dataset with {it:study-level indicator data} that is ready to be re-introduced into the command using the option {cmd:studypooling(1)}.  
 The required data structure and the output data with the different indicators is described in the {help repframe##see_also:online Readme on GitHub}.{p_end}
 
 
@@ -110,12 +111,15 @@ The required data structure and the output data with the different indicators is
 {opt beta_orig(varname)} specifies the variable {it:varname} that includes the original beta coefficient for the respective outcome at study level.
 
 {phang}
-{opt siglevel(#)} gives the significance level for two-sided tests at study level; {cmd:siglevel(5)}, for example, stands for a 5% level.
+{opt siglevel(#)} gives the significance level for two-sided tests at study level applied to robustness analyses;
+{cmd:siglevel(5)}, for example, stands for a 5% level;
+{cmd:siglevel(#)} is also the significance level applied to original results with indicators presented in the {it:Sensitivity Dashboard}.
 
 {phang}
 {opt siglevel_orig(#)} gives the maximum level of statistical significance labelled as statically significant by original authors, assuming two-sided tests; 
-if specified, original results will be classified as statistically significant against this benchmark; 
-{cmd:siglevel_orig(5)}, for example, stands for a 5% level applied by original authors. 
+{cmd:siglevel_orig(5)}, for example, stands for a 5% level applied by original authors;
+the {it:Reproducibility and Replicability Indicators table} classifies original results as statistically significant against this benchmark and
+the {it:Sensitivity Dashboard} shows the related {it:Indicator on non-agreement due to significance definition}.  
 
 {phang}
 {opt shortref(string)} provides a short reference in string format for the study, such as "[first author] et al. (year)".
@@ -193,7 +197,7 @@ If {cmd: filepath(string)} is not defined, outputs are stores in the operating s
 
 {phang}
 {opt fileid:entifier(string)} allows to specifiy an identifier by which to differentiate versions of the output files (table, graph, and data) of the {it:repframe} command.
-This identifier serves as a suffix to these files. If {cmd: fileidentifier(string)} is not defined, the current date is used as {cmd: fileidentifier(string)}.
+This identifier serves as a suffix to these files. If {cmd: fileidentifier(string)} is not defined, the current date is used as default.
 
 {phang}
 {opt orig_in_multiverse(0/1)} is a binary indicator on whether the original analysis is included as one analysis path in the multiverse robustness test
@@ -209,6 +213,10 @@ default is {cmd:ivarweight(0)}. This option requires that the options {cmd:mean(
 
 {marker optional_para_RRI}{...}		
 {dlgtab:optional parameters related to table of Reproducibility and Replicability Indicators}
+
+{phang}
+{opt tabfmt(string)} provides the file format under which the table of Reproducibility and Replicability Indicators is stored; default is {cmd:tabfmt(csv)}, 
+but a slightly more formatted version is available for {cmd:tabfmt(xlsx)}.
 
 {phang}
 {opt shelvedind(0/1)} is a binary indicator on whether to also show shelved indicators from among the indicators 
@@ -275,7 +283,8 @@ or "both" (both indicators); default is {cmd:extended("none")}.
 default at study level is {cmd:aggregation(0)}; if pooled across studies, {cmd:aggregation()} is always set to 1.
 
 {phang}
-{opt graphfmt(string)} provides the file format under which the Sensitivity Dashboard is stored; default is {cmd:graphfmt(emf)}. 
+{opt graphfmt(string)} provides the file format under which the Sensitivity Dashboard is stored; default is {cmd:graphfmt(emf)} for Windows
+and {cmd:graphfmt(tif)} otherwise; {help graph export:other possible formats} include {it:ps},  {it:eps},  {it:pdf}, and  {it:png}.
 
 {phang}
 {opt ivF(varname)} specifies the variable {it:varname} that includes the first-stage {it:F}-Statistics,

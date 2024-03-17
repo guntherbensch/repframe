@@ -29,6 +29,8 @@ program define repframe_gendata
 			
 	syntax , STUDYPOOLing(numlist max=1 integer) 
 	
+	ssc install estout
+
 	qui {
 		if `studypooling'==0 {
 			*** Set main locals 
@@ -127,6 +129,7 @@ program define repframe_gendata
 			*** create multiverse dataset
 			svmat R, names(col)
 			keep `R_matrix_col'
+			order p, after(se)
 			
 			label define outcome    1 "excellent or very good health status" 2 "blood lead level" 3 "Vitamic C"
 			label val outcome outcome   	

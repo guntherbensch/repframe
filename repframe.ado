@@ -1,4 +1,4 @@
-*! version 1.5  5mar2024 Gunther Bensch
+*! version 1.5.1  17mar2024 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
@@ -59,12 +59,12 @@ prog def repframe, sortpreserve
 	
 syntax varlist(numeric max=1) [if] [in], 
 [ 
-beta(varname numeric) beta_orig(varname numeric) shortref(string)  siglevel(numlist max=1 integer) siglevel_orig(numlist max=1 integer)  
-se(varname numeric) se_orig(varname numeric)  pval(varname numeric) pval_orig(varname numeric)  zscore(varname numeric) zscore_orig(varname numeric)
+beta(varname numeric) beta_orig(varname numeric) shortref(string)  siglevel(numlist max=1 integer) siglevel_orig(numlist max=1 integer) 
+se(varname numeric) se_orig(varname numeric)  pval(varname numeric) pval_orig(varname numeric)  zscore(varname numeric) zscore_orig(varname numeric) 
 STUDYPOOLing(numlist max=1 integer) 
 df(varname numeric) df_orig(varname numeric)  mean(varname numeric) mean_orig(varname numeric)  sameunits(varname numeric) 
-filepath(string)] [FILEIDentifier(string)  IVARWeight(numlist max=1 integer)  orig_in_multiverse(numlist max=1 integer) 
-shelvedind(numlist max=1 integer) 
+filepath(string) FILEIDentifier(string)  IVARWeight(numlist max=1 integer)  orig_in_multiverse(numlist max=1 integer) 
+tabfmt(string)  shelvedind(numlist max=1 integer) 
 beta2(varname numeric) beta2_orig(varname numeric)  se2(varname numeric) se2_orig(varname numeric)  pval2(varname numeric) pval2_orig(varname numeric)  zscore2(varname numeric) zscore2_orig(varname numeric) 
 SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggregation(numlist max=1 integer)  graphfmt(string)  ivF(varname numeric) signfirst(varname numeric)
 ];
@@ -75,7 +75,7 @@ SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggreg
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.5  5mar2024"
+	local repframe_vs  "version 1.5.1  17mar2024"
 
 *** Preserve initial dataset 
 	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not ossible) as different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
@@ -133,8 +133,18 @@ qui {
 ********************************************************************************			
 
 ************************************************************
-***  PART 2.A  COMMAND OPTIONS
+***  PART 2.A  MAINLIST AND COMMAND OPTIONS
 ************************************************************
+
+*** mainlist
+	decode `varlist', gen(mainlist_str)
+	egen mainlist = group(`varlist')
+	labmask mainlist, values(mainlist_str)
+	drop `varlist'
+	order mainlist mainlist_str
+
+	qui tab mainlist 
+	local N_outcomes = `r(r)'
 
 *** Option studypooling
 	if ("`studypooling'"!="" & "`studypooling'"!="0" & "`studypooling'"!="1") {
@@ -405,7 +415,16 @@ qui {
 		}
 	}
 
-*** Option shelvedind  
+*** Options tabfmt and shelvedind  
+	if ("`tabfmt'"!="" & "`tabfmt'"!="csv" & "`tabfmt'"!="xlsx") {
+		noi dis "{red: If {opt tabfmt} is defined, it needs to take on the string csv or xlsx}"	
+		use `inputdata', clear
+		exit
+	}
+	if "`tabfmt'"=="" {
+		local tabfmt "csv"
+	}
+
 	if ("`shelvedind'"!="" & "`shelvedind'"!="0" & "`shelvedind'"!="1") {
 		noi dis "{red: If {opt shelvedind} is defined, it needs to take on the value 0 (no) or 1 (yes)}"	
 		use `inputdata', clear
@@ -574,18 +593,27 @@ qui {
 			use `inputdata', clear
 			exit
 		}
+		if "`aggregation'"=="1" & `studypooling'==0 & `N_outcomes'==1 {
+			noi dis "The option {opt aggregation(1)} is not meant to be used with only one outcome and is therefore replaced by {opt aggregation(0)}. "
+			local aggregation = 0	
+		}
 		if "`aggregation'"=="" & `studypooling'==0 {
 			local aggregation = 0
 		}
 		if `studypooling'==1 {
 			if "`aggregation'"=="0" { 
-				noi dis "The option {opt aggregation(0)} is not meant to be used together with the option {opt studypooling(1)}. Use instead the option {opt aggregation(1)} at the study level."	
+				noi dis "The option {opt aggregation(0)} is not meant to be used together with the option {opt studypooling(1)} and is therefore replaced by {opt aggregation(1)}. Use the option {opt aggregation(1)} at the study level."	
 			}
 			local aggregation = 1
 		}
 
 		if "`graphfmt'"=="" {
-			local graphfmt emf
+			if c(os)=="Windows" {
+				local graphfmt emf
+			}
+			else {
+				local graphfmt tif
+			}
 		}
 			
 		** tF Standard Error Adjustment presented in Sensitivity Dashboard - based on lookup Table from Lee et al. (2022)
@@ -670,12 +698,6 @@ qui {
 ************************************************************
 
 *** Additional variable generation, e.g. on the effect direction and the relative effect size based on the raw data	
-	decode `varlist', gen(mainlist_str)
-	egen mainlist = group(`varlist')
-	labmask mainlist, values(mainlist_str)
-	drop `varlist'
-	order mainlist mainlist_str 
-	
 	if `studypooling'==0 {
 		gen beta_rel_i      = `beta'/mean_j*100
 		gen se_rel_i        = se_i/mean_j
@@ -693,8 +715,6 @@ qui {
 *** Information on share of outcomes with originally sig./ insig. estimates
 	// definition of whether orginal results is statistically significant may differ by whether level of stat. sig. from original study (_oa) or rep. analysis (_ra) is applied
 	// hence four different locals each for number (`origs'_`set'_out_N) and share (`origs'_`set'_out_share)	
-		qui tab mainlist 
-		local N_outcomes = `r(r)'
 		bysort mainlist: gen x_n_j = _n
 		foreach set in oa ra {
 		 	 gen x_osig_`set'_d_out    = (pval_orig_j<=0.`sigdigits_`set'') if x_n_j==1    
@@ -1260,7 +1280,7 @@ qui {
 
 	foreach unit in j osig_oa_all onsig_oa_all {
 		capture label var pval_orig_`unit'	"p-value of original estimate`label_`unit''" 
-		label var RF_SIGagr_`unit' 	"(RF.1) Significance agreement`label_`unit''"
+		label var RF_SIGagr_`unit' 	"(RF.1) Significance agreement`label_`unit''"	
 		label var RF_ESrel_`unit'	"(RF.2) Relative effect size`label_`unit''"	
 		label var RF_SIGrel_`unit' 	"(RF.3) Relative significance`label_`unit''"
 		label var RF_ESvar_`unit' 	"(RF.4) Effect sizes variation`label_`unit''"
@@ -1277,8 +1297,8 @@ qui {
 		label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
 		label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
 		label var RF2_ESrel_`unit' 			"(RF2.3) Relative effect size`label_`unit''"
-		label var RF2_ESvar_`unit'			"(RF2.4) Effct size variation`label_`unit''"
-		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance Variation for insig. rep. results`label_`unit''"
+		label var RF2_ESvar_`unit'			"(RF2.4) Effect size variation`label_`unit''"
+		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance variation for insig. rep. results`label_`unit''"
 		label var RF2_ESagr_`unit'			"(RF2.6) Effect size agreement`label_`unit''"
 		label var RF2_SIGsw_btonsig_`unit'  "(RF2.7a) Significance switch (beta)`label_`unit''"	
 		label var RF2_SIGsw_setonsig_`unit' "(RF2.7b) Significance switch (se)`label_`unit''"	
@@ -1288,8 +1308,8 @@ qui {
 		label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
 		label var RF2_SIGagr_sigdef_`unit'	"(RF2.1+) Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
 		label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
-		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance Variation for insig. rep. results`label_`unit''"
-		label var RF2_SIGvar_sig_`unit' 	"(RF2.5) Significance Variation for sig. rep. results`label_`unit''"
+		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance variation for insig. rep. results`label_`unit''"
+		label var RF2_SIGvar_sig_`unit' 	"(RF2.5) Significance variation for sig. rep. results`label_`unit''"
 		label var RF2_SIGsw_btosig_`unit'	"(RF2.7a) Significance switch (beta)`label_`unit''"
 		label var RF2_SIGsw_setosig_`unit'	"(RF2.7b) Significance switch (se)`label_`unit''"
 	}
@@ -1413,6 +1433,9 @@ qui {
 			tostring sensd_y, replace
 			labmask sensd_y, values(mainlist_str) lblname(ylab)	
 			
+			if `N_outcomes'==1 {
+				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'"  "'
+			}
 			if `N_outcomes'==2 | `N_outcomes'==3 {
 				recode sensd_y (1=`N_outcomes') (`N_outcomes'=1)
 				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'" `=sensd_y[2]' "`=mainlist_str[2]'"  "'
@@ -1513,8 +1536,8 @@ qui {
 			for num 1/`yset_n': replace `shvar2' = `shvar2'_X3 if sensd_y==X & sensd_x==3
 		}		
 		
-		                    gen     share_roundingdiff = 100-(share_11 + share_12 + share_13) if sensd_y==1
-		for num 2/`yset_n': replace share_roundingdiff = 100-(share_X1 + share_X2 + share_X3) if sensd_y==X
+		                    gen     share_roundingdiff = .
+		for num 1/`yset_n': replace share_roundingdiff = 100-(share_X1 + share_X2 + share_X3) if sensd_y==X
 		for num 1/`yset_n': replace share_roundingdiff = 0 if sensd_y==X & (share_X1 + share_X2 + share_X3 == 0)   // no rounding if entire row is zero, which may happen with -aggregation(1)- if none of the studied outcomes/ studies has (in)sig orig. estimates.
 		
 		** sum of shares exceeds 100%
@@ -1787,7 +1810,7 @@ qui {
 			graphregion(color(white)) scheme(white_tableau)  
 				// first line of this twoway command does not show up in the dashboard but is required to make the legend show up with the correct colours 
 			
-		graph export "`filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'", replace
+		graph export "`filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'", replace as(`graphfmt')
 
 	
 			
@@ -1925,9 +1948,14 @@ qui {
 
 		label var mainlist_str "Outcome"
 
-		local roundtozerodigits  beta_rel_orig
+		** formatting of indicators
+		format beta_orig  %10.4f
+		format beta_rel_orig  %10.2f
+		format pval_orig  %3.2f
+		format RF_SIGagr  %5.4f
+		format RF_ESrel RF_SIGrel RF_ESvar RF_SIGvar  %10.4f
 		if `shelvedind'==1 {
-			local roundtozerodigits   `roundtozerodigits'   RF_pooledH_A  RF_pooledH_B
+			format RF_pooledH_A  RF_pooledH_B  %10.4f
 		}
 	}
 	else {
@@ -1937,9 +1965,12 @@ qui {
 		
 		label var mainlist_str "Study reference"
 
-		local roundtozerodigits  RF_SIGagr_osig
+		** formatting of indicators
+		format RF_SIGagr_osig RF_SIGagr_onsig  %5.4f
+		format RF_ESrel_osig RF_SIGrel_osig RF_ESvar_osig RF_SIGvar_osig  RF_ESrel_onsig RF_SIGrel_onsig RF_ESvar_onsig RF_SIGvar_onsig  %10.4f
+
 		if `shelvedind'==1 {
-			local roundtozerodigits   `roundtozerodigits'   RF_pooledH_A_osig RF_pooledH_A_onsig  RF_pooledH_B_osig RF_pooledH_B_onsig 
+			local roundto2digits   `roundto2digits'   RF_pooledH_A_osig RF_pooledH_A_onsig  RF_pooledH_B_osig RF_pooledH_B_onsig 
 		}
 	}
 
@@ -1960,17 +1991,6 @@ qui {
 	drop panel list_n 
 	set obs `=_N+1'
 	replace mainlist_str = "__________________" 	if mainlist_str==""
-
-
-	** rounding of shares and other variables 
-	foreach var0 of local roundtozerodigits {
-	    replace `var0'  = round(`var0')
-	}
-	
-	ds mainlist_str `roundtozerodigits', not
-	foreach var2 in `r(varlist)' {
-	    replace `var2'  = round(`var2', .01)
-	}
 
 
 	** create gap between originally sig. and originally insig. indicators
@@ -2022,12 +2042,36 @@ qui {
 
 	set obs `=_N+1'
 	replace mainlist_str = "repframe `repframe_vs'" if mainlist_str==""
-	set obs `=_N+1'
-	replace mainlist_str = "More details on indicator definitions under https://github.com/guntherbensch/repframe" if mainlist_str=="" 
-	
 
-	export excel "`filepath'/repframe_indicators_`ind_level'_`fileidentifier'.csv", firstrow(varlabels) replace
-	noi dis _newline(1)	"Reproducibility and Replicability Indicators table stored under `filepath'/repframe_indicators_`ind_level'_`fileidentifier'.csv"
+	if "`tabfmt'"=="csv" {
+		set obs `=_N+1'
+		replace mainlist_str = "   " if mainlist_str==""
+		if `studypooling'==0 {
+			set obs `=_N+1'	
+			replace mainlist_str = "pval_orig - p-value of original estimate; beta_orig - original beta estimate; beta_rel_orig - original beta estimate, expressed as % deviation from original mean of the outcome" if mainlist_str=="" 
+		}
+		set obs `=_N+1'	
+		replace mainlist_str = "RF_SIGagr - (RF1) Statistical significance indicator" if mainlist_str==""
+		set obs `=_N+1'	
+		replace mainlist_str = "RF_ESrel - (RF2) Relative effect size indicator; RF_SIGrel - (RF3) Relative significance indicator" if mainlist_str==""
+		set obs `=_N+1'
+		replace mainlist_str = "RF_ESvar - (RF4) Effect sizes variation indicator; RF_SIGvar - (RF5) Significance variation indicator" if mainlist_str==""
+		if `studypooling'==1 {
+			set obs `=_N+1'
+			replace mainlist_str = "osig - originally significant; onsig - originally insignificant" if mainlist_str==""
+		}
+		set obs `=_N+1'
+		replace mainlist_str = "More details on indicator definitions under https://github.com/guntherbensch/repframe" if mainlist_str=="" 
+		
+		export delimited "`filepath'/repframe_indicators_`ind_level'_`fileidentifier'.csv", replace delimiter(;) datafmt
+	}
+	if "`tabfmt'"=="xlsx" {
+		set obs `=_N+1'
+		replace mainlist_str = "More details on indicator definitions under https://github.com/guntherbensch/repframe" if mainlist_str=="" 
+
+		export excel "`filepath'/repframe_indicators_`ind_level'_`fileidentifier'.xlsx", firstrow(varlabels) replace
+	}
+	noi dis _newline(1)	"Reproducibility and Replicability Indicators table stored under `filepath'/repframe_indicators_`ind_level'_`fileidentifier'.`tabfmt'"
 	noi dis _newline(2)
 	
 	use `inputdata', clear
