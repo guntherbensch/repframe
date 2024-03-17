@@ -1,4 +1,4 @@
-# REPFRAME v1.5
+# REPFRAME v1.5.1
 
 This is a Stata package to calculate, tabulate and visualize Reproducibility and Replicability Indicators. These indicators compare estimates from a multiverse of analysis paths of a robustness analysis &mdash; be they reproducibility or replicability analyses &mdash; to the original estimate in order to gauge the degree of reproducibility or replicability. The package comes with two commands: `repframe` is the main command, and `repframe_gendata` generates a dataset that is used in the help file of the command to show examples of how the command works.  
 
@@ -13,7 +13,7 @@ help repframe
 ```
 for the syntax and the whole range of options.
 
-As shown in the figure below and described in the following, the `repframe` command can be applied both to derive indicators at the level of individual studies and to pool these indicators across studies. At both levels, the command produces two outputs, a table with the main set of indicators (*Reproducibility and Replicability Indicators table*) as .csv file and a so-called *Sensitivity Dashboard* that visualizes a second set of indicators. At the study level, the command additionally produces a Stata .dta file as a third output. This *study-level indicator data* is ready to be re-introduced into the command to calculate the indicators across studies.  
+As shown in the figure below and described in the following, the `repframe` command can be applied both to derive indicators at the level of individual studies and to pool these indicators across studies. At both levels, the command produces two outputs, a table with the main set of indicators (*Reproducibility and Replicability Indicators table*) as .csv or xlsx file and a so-called *Sensitivity Dashboard* that visualizes a second set of indicators. At the study level, the command additionally produces a Stata .dta file as a third output. This *study-level indicator data* is ready to be re-introduced into the command to calculate the indicators across studies.  
 
 <img width="800" alt="repframe outputs" src="https://github.com/guntherbensch/repframe/assets/128997073/bd1c5852-355b-427d-9c4e-963aa7d39333"> &nbsp;
 
@@ -24,6 +24,9 @@ As shown in the figure below and described in the following, the `repframe` comm
 The `repframe` command applies a few default assumptions. Use the following options in case your analysis makes different assumptions. 
 
 <ins>Tests for statistical significance</ins>: The command applies two-sided *t*-tests to define which *p*-values imply statistical significance. These tests may apply different significance levels to the original results (`siglevel_orig(#)`) and to the robustness results (`siglevel(#)`). If the related *p*-values retrieved via the options `pval(varname)` and `pval_orig(varname)` are based on one-sided tests, these *p*-values need to be multiplied by two so as to make them correspond to a two-sided test. If no information on *p*-values is available, the command derives the missing *p*-value information applying the *t*-test formula. Depending on which additional information is available, this may be done based on *t*/*z*-scores (`zscore(varname)` and `zscore_orig(varname)`), on standard errors (`se(varname)` and `se_orig(varname)`) and degrees of freedom (`df(varname)` and `df_orig(varname)`), or on standard errors assuming a normal distribution. Remember that the latter may not always be appropriate, for example with small samples or when estimations have few degrees of freedom because they account for survey sampling, e.g. via the Stata command `svy:`. Conversely, if input data on *p*-values is based on other distributional assumptions than normality, the formula may not correctly derive standard errors. It is therefore recommended to specify both the information on *p*-values and on standard errors, and to consider the implications if non-normality is assumed in either the original or robustness analysis. 
+
+> [!IMPORTANT]  
+> Replicators of the **Robustness Reproducibility in Economics(R<sup>2</sup>E)** project should always apply a 5% significance level to the robustness results, i.e. `siglevel(5)`.
 
 <ins>Units in which effect sizes are measured</ins>: The command assumes that effect sizes of original results and robustness results are measured in the same unit. If this is not the case, for example because one is measured in log terms and the other is not, use the option `sameunits(varname)`. This option requires a numerical variable **varname** containing the observation-specific binary information on whether the two are measured in the same unit (1=yes) or not (0=no).
 
@@ -129,7 +132,7 @@ applied separately to $pval^{orig}_j \le \alpha^{orig}$ and $pval^{orig}_j > \al
 :point_right: This absolute indicator is intended to capture the variation in the statistical significance across robustness results.
 > *Interpretation*: $I_{5j}$ simply reports the standard deviation of *t*/*z*-values of all the robustness analysis paths for outcome $j$ as a measure of variation in statistical significance. Higher values indicate higher levels of variation.
 
-The following shows an example of the *Reproducibility and Replicability Indicators table*, indicating the five indicators as outlined above.
+The following shows an example of the *Reproducibility and Replicability Indicators table*, indicating the five indicators as outlined above. The indicators are grouped by whether the original result for the respective outcome was reported as statistically significant or not. Each of these two sets of outcomes also includes the average across the respective outcomes. 
 
 <img width="600" alt="repframe indicators table example" src="https://github.com/guntherbensch/repframe/assets/128997073/24f31cc0-87b4-42bf-8446-621e22db3fe5"> &nbsp;
 &nbsp;
@@ -228,7 +231,8 @@ $$ I´_{8j} = mean(\mathbb{I}(se_i  < se(tosig)_j)) \times 100   		\quad  \text{
 
 The following shows an example of the *Sensitivity Dashboard*, indicating where the indicators outlined above can be found in the figure. Indicators from the extended set are in lighter blue. The vertical axis of the dashboard shows individual outcomes, grouped into statistically significant and insignificant if aggregated. Note that this grouping may differ from the one in the *Reproducibility and Replicability Indicators table*, because that table applies to original results the significance level defined by original authors, whereas the dashboard applies the same significance level as adopted in the robustness analysis. The horizontal axis distinguishes between statistically significant and insignificant robustness results, additionally differentiating between statistically significant results in the same and in opposite direction. Circle sizes illustrate $I´_{1j}$, the *significance agreement indicator*. They are coloured in either darker blue for confirmatory results or in lighter blue for non-confirmatory results. As can be seen with Outcome 3 in the figure, this colouring also discriminates $I´_{1j}$ from $I´_{2j}$, the *indicator on non-agreement due to significance definition*.
 
-<img width="700" alt="repframe Sensitivity Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ac29ab67-727c-44a6-a0c6-855e99821f60"> &nbsp;
+<img width="700" alt="repframe Sensitivity Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ce6763f0-ba69-439c-a346-4e7adcb3b5dd"> &nbsp;
+
 &nbsp;
 
 <img width="700" alt="repframe Sensitivity Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/b8616f2e-a187-4e38-8144-480998388b40"> &nbsp;
@@ -237,9 +241,15 @@ The following shows an example of the *Sensitivity Dashboard*, indicating where 
 
 ## Update log
 
+2024-03-17, v1.5.1:
+
+- Improve MacOS compatibility.
+- Revise table output, including added `tabfmt` option.
+- Fix a bug that occurred when assessing only one outcome. 
+
 2024-03-05, v1.5:
 
-- Remove minor bugs occuring with `studypooling(1)`.
+- Fix minor bugs occuring with `studypooling(1)`.
 - Clarify that `repframe` only works with Stata 14.0 or higher.
 - Introduce option `studypooling` to `repframe_genadd` command and include illustrative example on pooling across studies in Stata help file. 
 
