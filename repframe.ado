@@ -1,4 +1,4 @@
-*! version 1.5.1  17mar2024 Gunther Bensch
+*! version 1.5.2  03jun2024 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
@@ -15,7 +15,7 @@
 				
 				PART 4.  INDICATOR DATASET AT STUDY LEVEL
 				
-				PART 5.  SENSITIVITY DASHBOARD VISUALIZATION
+				PART 5.  ROBUSTNESS DASHBOARD VISUALIZATION
 				
 				PART 6.  COMPILE REPRODUCIBILITY AND REPLICABILITY INDICATORS
 
@@ -66,7 +66,7 @@ df(varname numeric) df_orig(varname numeric)  mean(varname numeric) mean_orig(va
 filepath(string) FILEIDentifier(string)  IVARWeight(numlist max=1 integer)  orig_in_multiverse(numlist max=1 integer) 
 tabfmt(string)  shelvedind(numlist max=1 integer) 
 beta2(varname numeric) beta2_orig(varname numeric)  se2(varname numeric) se2_orig(varname numeric)  pval2(varname numeric) pval2_orig(varname numeric)  zscore2(varname numeric) zscore2_orig(varname numeric) 
-SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggregation(numlist max=1 integer)  graphfmt(string)  ivF(varname numeric) signfirst(varname numeric)
+DASHboard(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggregation(numlist max=1 integer)  graphfmt(string)  ivF(varname numeric) signfirst(varname numeric)
 ];
 
 #delimit cr
@@ -75,28 +75,28 @@ SENSDash(numlist max=1 integer)  vshortref_orig(string)  extended(string) aggreg
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.5.1  17mar2024"
+	local repframe_vs  "version 1.5.2  03jun2024"
 
 *** Preserve initial dataset 
-	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not ossible) as different datasets will be used for the table of Indicators and for the Sensitivity Dashboard
+	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not ossible) as different datasets will be used for the table of Indicators and for the Robustness Dashboard
 	save `inputdata'
 	
 *** Syntax components that have to be defined early on in PART 1
-	if "`sensdash'"=="" {
-		local sensdash = 1
+	if "`dashboard'"=="" {
+		local dashboard = 1
 	}
 	if "`studypooling'"=="" {
 		local studypooling = 0 
 	}
 	
-*** Install user-written packages from SSC, mainly required for the Sensibility Dashboard
+*** Install user-written packages from SSC, mainly required for the Robustness Dashboard
 	capture which labmask
 	if _rc == 111 {                 
 		noi dis "Installing labutil"
 		ssc install labutil, replace
 	}
 	
-	if `sensdash'==1 {
+	if `dashboard'==1 {
 		capture which colrspace.sthlp 
 		if _rc == 111 {                 
 			noi dis "Installing colrspace"
@@ -315,7 +315,7 @@ qui {
 		}
 		
 		if "`siglevel_orig'"=="" { 
-			noi dis "{red: Unless {opt studypooling(1)} is specified, {opt shortref()} has to be specified}"	
+			noi dis "{red: Unless {opt studypooling(1)} is specified, {opt siglevel_orig()} has to be specified. If the orginal study does not specify any significance level, it is recommended to set {opt siglevel_orig()} equal to {opt siglevel()}}"	
 			use `inputdata', clear
 			exit
 		}
@@ -555,10 +555,10 @@ qui {
 			gen beta2_orig_j = .
 		}
 
-*** Option sensdash
+*** Option dashboard
 		if (beta2_i!=. | beta2_orig_j!=.) {
-			local sensdash = 0
-			noi dis "If {opt beta2()} or {opt beta2_orig()} is specified, no Sensitivity Dashboard is prepared."	
+			local dashboard = 0
+			noi dis "If {opt beta2()} or {opt beta2_orig()} is specified, no Robustness Dashboard is prepared."	
 		}
 	}
  
@@ -566,12 +566,12 @@ qui {
 	if "`ivF'"=="" {
 		local tFinclude = 0
 	}
-	if `sensdash'==0 & "`ivF'"!=""  {
-		noi dis "{red: The option {opt ivF()} is not meant to be used together with option {opt sensdash(0)}.}"
+	if `dashboard'==0 & "`ivF'"!=""  {
+		noi dis "{red: The option {opt ivF()} is not meant to be used together with option {opt dashboard(0)}.}"
 		use `inputdata', clear
 		exit
 	}
-	if `sensdash'==1 {
+	if `dashboard'==1 {
 		if "`vshortref_orig'"!="" {
 			local ytitle_row0 `vshortref_orig'
 		}
@@ -616,7 +616,7 @@ qui {
 			}
 		}
 			
-		** tF Standard Error Adjustment presented in Sensitivity Dashboard - based on lookup Table from Lee et al. (2022)
+		** tF Standard Error Adjustment presented in Robustness Dashboard - based on lookup Table from Lee et al. (2022)
 		if "`ivF'"!="" {
 			local tFinclude = 1
 				
@@ -646,7 +646,7 @@ qui {
 			drop IVF_* adj_* tF_adj
 		}
 		
-		** different indicators to be shown in Sensitivity Dashboard depending on whether IV/ tF is included
+		** different indicators to be shown in Robustness Dashboard depending on whether IV/ tF is included
 		if `studypooling'==0 {
 			local check_05_osig = 1
 		}
@@ -664,6 +664,7 @@ qui {
 				local RF2_SIGagr_05        			RF2_SIGagr_05        		RF2_SIGagr_05tF
 				local RF2_SIGagr_05_j      			RF2_SIGagr_05_j      		RF2_SIGagr_05tF_j
 				local RF2_SIGagr_05_osig    		RF2_SIGagr_05_osig 			RF2_SIGagr_05tF_osig
+				local RF2_SIGagr_05_onsig    		RF2_SIGagr_05_onsig 		RF2_SIGagr_05tF_onsig
 				local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05tF_osig_ra_all
 				local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05tF_onsig_ra_all
 			}
@@ -671,6 +672,7 @@ qui {
 				local RF2_SIGagr_05       			RF2_SIGagr_05tF
 				local RF2_SIGagr_05_j      			RF2_SIGagr_05tF_j
 				local RF2_SIGagr_05_osig    		RF2_SIGagr_05tF_osig
+				local RF2_SIGagr_05_onsig    		RF2_SIGagr_05tF_onsig
 				local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05tF_osig_ra_all
 				local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05tF_onsig_ra_all
 			}
@@ -679,13 +681,15 @@ qui {
 			local RF2_SIGagr_05        			RF2_SIGagr_05
 			local RF2_SIGagr_05_j      			RF2_SIGagr_05_j
 			local RF2_SIGagr_05_osig   			RF2_SIGagr_05_osig
+			local RF2_SIGagr_05_onsig  			RF2_SIGagr_05_onsig
 			local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05_osig_ra_all
 			local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all
 		}
 		if (`tFinclude'!=1 & `signum_ra'==5) | `check_05_osig'==0 {
 			local RF2_SIGagr_05        
 			local RF2_SIGagr_05_j      
-			local RF2_SIGagr_05_osig    
+			local RF2_SIGagr_05_osig
+			local RF2_SIGagr_05_onsig    
 			local RF2_SIGagr_05_osig_ra_all
 			local RF2_SIGagr_05_onsig_ra_all
 		}
@@ -836,15 +840,15 @@ qui {
 		local RF_list_nosfx  	`RF_list_nosfx'  RF_robratio_A RF_robratio_B RF_pooledH_A RF_pooledH_B
 	}
 	
-	local RF2_list_j 			RF2_SIGagr_j `RF2_SIGagr_05_j' RF2_SIGagr_ndir_j  RF2_ESrel_j RF2_ESvar_j  RF2_SIGvar_nsig_j RF2_SIGvar_sig_j RF2_ESagr_j  RF2_SIGsw_btonsig_j RF2_SIGsw_setonsig_j  RF2_SIGagr_sigdef_j  RF2_SIGsw_btosig_j RF2_SIGsw_setosig_j      
-	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_05_osig_ra_all'                                  RF2_SIGagr_ndir_osig_ra_all   RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all  RF2_SIGvar_nsig_osig_ra_all  								RF2_ESagr_osig_ra_all  RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all 
-	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_05_onsig_ra_all'  RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGagr_ndir_onsig_ra_all  											    RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all		  			       RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all 
-	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_05'                    RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
-	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_05'  RF2_SIGagr_sigdef RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig            RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
+	local RF2_list_j 			RF2_SIGagr_j 		  	`RF2_SIGagr_05_j' 			 RF2_SIGagr_ndir_j  			RF2_ESrel_j           RF2_ESvar_j 			RF2_SIGvar_nsig_j   		 RF2_SIGvar_sig_j  				RF2_SIGagr_sigdef_j 	       RF2_SIGcfm_oas_j 		   RF2_SIGcfm_oan_j  								    	RF2_ESagr_j  	 	   RF2_SIGsw_btonsig_j RF2_SIGsw_btosig_j  RF2_SIGsw_setonsig_j RF2_SIGsw_setosig_j      
+	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_05_osig_ra_all'  RF2_SIGagr_ndir_osig_ra_all    RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all									RF2_SIGagr_sigdef_osig_ra_all  RF2_SIGcfm_oas_osig_ra_all  RF2_SIGcfm_oan_osig_ra_all  RF2_SIGcfm_uni_osig_ra_all	RF2_ESagr_osig_ra_all  RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all 
+	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_05_onsig_ra_all' RF2_SIGagr_ndir_onsig_ra_all   											RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all	RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all  		  			   RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all 
+	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_05' RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                 RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan  RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
+	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_05' RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig  RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan             RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
 
 
 	if `studypooling'==0 {
-		** 1. Significance agreement
+		** (1.) Significance agreement
 					    gen x_RF_SIGagr_i = (pval_i<=0.`sigdigits_ra' ///
 											  & beta_dir_i==beta_orig_dir_j)		if pval_orig_j<=0.`sigdigits_oa' & beta2_i==.
 					replace x_RF_SIGagr_i = (pval_i>0.`sigdigits_ra')				if pval_orig_j>0.`sigdigits_oa'  & beta2_i==.
@@ -872,7 +876,7 @@ qui {
 		bysort mainlist: egen RF_SIGagr_j = mean(x_RF_SIGagr_i) 						  	 
 				
 			
-		** 1+. Significance agreement - alternative indicator set	
+		** (1') Significance agreement - alternative indicator set	
 			// not for beta2_orig_j==1 | beta2_i==1
 						  gen x_RF2_SIGagr_i		= (pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j)*100 	if beta2_orig_j==. & beta2_i==.
 		bysort mainlist: egen   RF2_SIGagr_j    	= mean(x_RF2_SIGagr_i) 
@@ -886,28 +890,42 @@ qui {
 		bysort mainlist: egen   RF2_SIGagr_05_j  	= mean(x_RF2_SIGagr_05_i)
 		}
 
-
-		** 1+. Significance agreement (insig. because of less stringent significance definition)
-			// not for beta2_orig_j==1 | beta2_i==1
-		   	 			  gen x_RF2_SIGagr_sigdef_i = (pval_i>0.`sigdigits_ra' & pval_i<=0.`sigdigits_oa')*100		if pval_orig_j>0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==. & pval_orig_j<=0.`sigdigits_oa'
-		bysort mainlist: egen   RF2_SIGagr_sigdef_j = mean(x_RF2_SIGagr_sigdef_i)
-
-
-		** 1+. Significance agreement (opposite direction)
+			// - opposite direction -
 			// not for beta2_orig_j==1 | beta2_i==1
 					      gen x_RF2_SIGagr_ndir_i	= (pval_i<=0.`sigdigits_ra' ///
 												    & beta_dir_i!=beta_orig_dir_j)*100	if beta2_orig_j==. & beta2_i==.										
 		bysort mainlist: egen   RF2_SIGagr_ndir_j	= mean(x_RF2_SIGagr_ndir_i) 
 
 
-		** 2. Relative effect size 
+		** (5') Indicator on non-agreement due to significance classification Significance agreement - alternative indicator set
+			// - insig. [sig.] only because of less [more] stringent OA significance classification -
+			// not for beta2_orig_j==1 | beta2_i==1
+		   	 			  gen x_RF2_SIGagr_sigdef_i = (pval_i>0.`sigdigits_ra' & pval_i<=0.`sigdigits_oa')*100		if pval_orig_j>0.`sigdigits_ra'  & beta2_orig_j==. & beta2_i==. & pval_orig_j<=0.`sigdigits_oa'  
+					  replace x_RF2_SIGagr_sigdef_i = (pval_i<=0.`sigdigits_ra' & pval_i>0.`sigdigits_oa')*100		if pval_orig_j<=0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==. & pval_orig_j>0.`sigdigits_oa'  
+
+		bysort mainlist: egen   RF2_SIGagr_sigdef_j = mean(x_RF2_SIGagr_sigdef_i)
+		
+			// set indicator to zero for other outcomes so that aggregated indicator later takes the correct mean 
+					 egen x_RF2_SIGagr_sigdef_j_any = min(RF2_SIGagr_sigdef_j)
+					  gen       RF2_SIGagr_sigde2_j = .
+		if `signum_ra'<`signum_oa' {
+					  replace   RF2_SIGagr_sigde2_j = RF2_SIGagr_sigdef_j											if x_RF2_SIGagr_sigdef_j_any>0 & x_RF2_SIGagr_sigdef_j_any<.
+					  replace   RF2_SIGagr_sigde2_j = 0 															if x_RF2_SIGagr_sigdef_j_any>0 & x_RF2_SIGagr_sigdef_j_any<. & pval_orig_j>0.`sigdigits_ra'  & beta2_orig_j==. & beta2_i==. & pval_orig_j>0.`sigdigits_oa'  & RF2_SIGagr_sigde2_j==.
+		}
+		if `signum_ra'>`signum_oa' {
+					  replace   RF2_SIGagr_sigde2_j = RF2_SIGagr_sigdef_j											if x_RF2_SIGagr_sigdef_j_any>0 & x_RF2_SIGagr_sigdef_j_any<.
+					  replace   RF2_SIGagr_sigde2_j = 0 															if x_RF2_SIGagr_sigdef_j_any>0 & x_RF2_SIGagr_sigdef_j_any<. & pval_orig_j<=0.`sigdigits_ra' & beta2_orig_j==. & beta2_i==. & pval_orig_j<=0.`sigdigits_oa' & RF2_SIGagr_sigde2_j==.
+		}
+
+
+		** (2.) Relative effect size 
 			// only for original results reported as statistically significant at the 0.`sigdigits_oa' level
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
 		bysort mainlist: egen x_RF_ESrel_j = mean(`beta')   					if (pval_orig_j<=0.`sigdigits_oa') & sameunits_i==1 & beta2_orig_j==. & beta2_i==.
 						  gen   RF_ESrel_j = x_RF_ESrel_j/beta_orig_j
 
 
-		** 2+. Relative effect size - alternative indicator set
+		** (2'). Relative effect size - alternative indicator set
 				// only for original results reported as statistically significant at the 0.`sigdigits_ra' level
 				// + only for analysis paths of reproducability or replicability analyses reported as statistically significant at the 0.`sigdigits_ra' level
 				// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
@@ -916,14 +934,14 @@ qui {
 						  gen   RF2_ESrel_j 	= ((x_RF2_ESrel_j) - 1)*100
 
 			   
-		** 3. Relative significance
+		** (3.) Relative significance
 			// only for original results reported as statistically significant at the 0.`sigdigits_oa' level
 			// zscore already averaged above for cases where there are two coefficients
 						  gen x_RF_SIGrel_i = zscore_i/zscore_orig_j
 		bysort mainlist: egen   RF_SIGrel_j = mean(x_RF_SIGrel_i)   			if pval_orig_j<=0.`sigdigits_oa'
 		
 
-		// preparation for Variation Indicators 4, 4+ and 5: add original estimate as additional observation if included as one analysis path of reproducability or replicability analysis
+		// preparation for Variation Indicators 4, 3' and 5: add original estimate as additional observation if included as one analysis path of reproducability or replicability analysis
 		if `orig_in_multiverse'==1 {
 			bysort mainlist: gen outcome_n = _n
 			expand 2 if outcome_n==1, gen(add_orig)
@@ -934,19 +952,19 @@ qui {
 			replace pval_i 	    = pval_orig_j 	 if add_orig==1
 			replace zscore_i    = zscore_orig_j  if add_orig==1
 			
-			bysort mainlist: egen x_RF2_ESrel_j3 = median(`beta')	 			if pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j & pval_orig_j<=0.`sigdigits_ra'  // redo x_RF2_ESrel_j2
+			bysort mainlist: egen x_RF2_ESrel_j3 = median(`beta')	 			if pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j & pval_orig_j<=0.`sigdigits_ra' & sameunits_i==1 & beta2_orig_j==. & beta2_i==.   // redo x_RF2_ESrel_j2
 			replace x_RF2_ESrel_j2 = x_RF2_ESrel_j3 
 			// other *_j variables do not need to be adjusted, as they are already generated by the expand command
 		}
 		
 		
-		** 4. Effect sizes variation
+		** (4.) Effect sizes variation
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
 		bysort mainlist: egen x_RF_ESvar_j = sd(`beta')							if sameunits_i==1 & beta2_orig_j==. & beta2_i==.
 						  gen   RF_ESvar_j = x_RF_ESvar_j/se_orig_j        
 		
 		
-		** A4+. Effect sizes variation - alternative indicator set
+		** (3') Effect sizes variation - alternative indicator set
 			// only for original results reported as statistically significant at the 0.`sigdigits_ra' level
 			// + only for analysis paths of reproducability or replicability analyses reported as statistically significant at the 0.`sigdigits_ra' level
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
@@ -955,7 +973,7 @@ qui {
 						  gen   RF2_ESvar_j = (x_RF2_ESvar_j/abs(beta_orig_j))*100
 		
 		
-		** 5. Significance variation
+		** (5.) Significance variation
 			// zscore already averaged above for cases where there are two coefficients
 		bysort mainlist: egen   RF_SIGvar_j = sd(zscore_i)	
 
@@ -966,7 +984,7 @@ qui {
 		}
 
 
-		** A5+. Significance variation - alternative indicator set
+		** (4') Significance variation - alternative indicator set
 			// not for beta2_orig_j==1 | beta2_i==1
 						  gen x_RF2_SIGvar_nsig_i = abs(pval_i-pval_orig_j)	if pval_i>0.`sigdigits_ra' &  beta2_orig_j==. & beta2_i==.
 		bysort mainlist: egen   RF2_SIGvar_nsig_j = mean(x_RF2_SIGvar_nsig_i)
@@ -975,7 +993,25 @@ qui {
 		bysort mainlist: egen   RF2_SIGvar_sig_j  = mean(x_RF2_SIGvar_sig_i)
 		
 
-		** A6+. Effect size agreement - alternative indicator set
+		** (6') Significance classification agreement (applying UNIform alpha as used in Reproducability or Replicability Analyses OR OAs alpha to original results)
+			// these indicators (uni & oa) will evenetually only be included as study and acorss-study totals (*_all)  
+				gen RF2_SIGcfm_uni_j = 100 - RF2_SIGagr_j - RF2_SIGagr_ndir_j   if pval_orig_j>0.`sigdigits_ra'  			
+			replace RF2_SIGcfm_uni_j =       RF2_SIGagr_j                       if pval_orig_j<=0.`sigdigits_ra'	
+
+				gen RF2_SIGcfm_oa_j  = 100 - RF2_SIGagr_j - RF2_SIGagr_ndir_j   if pval_orig_j>0.`sigdigits_oa'  			
+		    replace RF2_SIGcfm_oa_j  =       RF2_SIGagr_j                       if pval_orig_j<=0.`sigdigits_oa'
+			replace RF2_SIGcfm_oa_j  = RF2_SIGcfm_oa_j + RF2_SIGagr_sigdef_j 	if RF2_SIGagr_sigdef_j!=.
+
+			// for presentation in the Dashboards, the oa indicator additionally needs to be differentiated by sig (oas) an insig (oan) reproducability or replicability analyses
+			    gen RF2_SIGcfm_oas_j = 0 
+			replace RF2_SIGcfm_oas_j =       RF2_SIGagr_j                       if pval_orig_j<=0.`sigdigits_oa'
+			replace RF2_SIGcfm_oas_j = RF2_SIGagr_sigdef_j   					if pval_orig_j>0.`sigdigits_oa' & RF2_SIGagr_sigdef_j!=.
+				gen RF2_SIGcfm_oan_j = 0  
+			replace RF2_SIGcfm_oan_j = 100 - RF2_SIGagr_j - RF2_SIGagr_ndir_j   if pval_orig_j>0.`sigdigits_oa' 
+			replace RF2_SIGcfm_oan_j = RF2_SIGagr_sigdef_j   					if pval_orig_j<=0.`sigdigits_oa' & RF2_SIGagr_sigdef_j!=.
+
+
+		** (7') Effect size agreement - alternative indicator set
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
 		 if "`df'"=="" {
 			gen x_z_crit = abs(invnormal(0.`sigdigits_ra'/2))
@@ -992,7 +1028,7 @@ qui {
 		               replace  RF2_ESagr_j  = RF2_ESagr_j*100
 
 
-		** A7+. Significance switch - alternative indicator set
+		** (8' & 9') Significance switch - alternative indicator set
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1	
 						  gen x_RF2_SIGsw_btonsig_i  = (abs(`beta')<=beta_abs_orig_p`sigdigits_ra'_j)*100	if pval_i>0.`sigdigits_ra' & sameunits_i==1 & beta2_orig_j==. & beta2_i==.	// multiples of 0.1 cannot be held exactly in binary in Stata -> shares converted to range from 1/100, not from 0.01 to 1.00
 						  gen x_RF2_SIGsw_setonsig_i = (se_i>=se_orig_p`sigdigits_ra'_j)*100				if pval_i>0.`sigdigits_ra' & sameunits_i==1 & beta2_orig_j==. & beta2_i==.
@@ -1072,7 +1108,7 @@ qui {
 			save `data_pooled_k'
 		restore
 
-		order mainlist mainlist_str `RF_list_osig_oa_k' `RF2_list_osig_ra_k' RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all 
+		order mainlist mainlist_str 
 
 		rename *_osig_oa_all  *1
 		rename *_onsig_oa_all *2
@@ -1080,21 +1116,28 @@ qui {
 		rename *_onsig_ra_all *4
 		
 		
-		reshape long `RF_list_nosfx' `RF2_osig_list_nosfx' RF2_SIGagr_sigdef RF2_SIGvar_sig RF2_SIGsw_btosig RF2_SIGsw_setosig, i(mainlist) j(level)
+		reshape long `RF_list_nosfx' `RF2_osig_list_nosfx' RF2_SIGvar_sig RF2_SIGsw_btosig RF2_SIGsw_setosig, i(mainlist) j(level)
 		
-		** if pooled across studies, the reference for statistical significance differs between oa and rep
+		** if pooled across studies, the reference for statistical significance may differ between oa and rep
 		gen     pval_orig_oa = 0.`sigdigits_oa' - 0.01 if level==1 		// originally sig outcomes have pval below 0.`sigdigits_oa' -> used to distinguish indicators below
 		replace pval_orig_oa = 0.`sigdigits_oa' + 0.01 if level==2
 		gen     pval_orig_ra = 0.`sigdigits_ra' - 0.01 if level==3 		
 		replace pval_orig_ra = 0.`sigdigits_ra' + 0.01 if level==4
-		drop level
+
+		** generate RF2_SIGagr_sigde2 analogously to the `studypooling'==0 case above
+		bysort level: egen x_RF2_SIGagr_sigdef_any = min(RF2_SIGagr_sigdef)
+ 				       gen   RF2_SIGagr_sigde2     = .
+		  		   replace   RF2_SIGagr_sigde2  = RF2_SIGagr_sigdef	if x_RF2_SIGagr_sigdef_any>0 & x_RF2_SIGagr_sigdef_any<.
+			 	   replace   RF2_SIGagr_sigde2  = 0 				if x_RF2_SIGagr_sigdef_any>0 & x_RF2_SIGagr_sigdef_any<. & RF2_SIGagr!=. & RF2_SIGagr_sigde2==.
+
+		drop level x_*
 		
 		ds mainlist mainlist_str, not 
 		foreach var in `r(varlist)' {
 			rename `var' `var'_j		// now _j stands for study
 		}		
 		
-		order  mainlist mainlist_str `RF_list_j' `RF2_list_j'			
+		order  mainlist mainlist_str `RF_list_j' `RF2_list_j'	
 	}
 				
 
@@ -1105,7 +1148,7 @@ qui {
 	
 *** Indicator Set RF
 	if `studypooling'==1 {
-		gen pval_orig_j = pval_orig_oa_j	//   if pooled across studies, first set pval_orig_j to pval_orig_oa_j, before setting it to pval_orig_ra_j under the second Indicator Set, and then setting it to missing
+		gen pval_orig_j = pval_orig_oa_j	//   if pooled across studies, pval_orig_j is first set to pval_orig_oa_j for the first Indicator Set, before it is set to pval_orig_ra_j below under the second Indicator Set; after that, it is set to missing
 	}
 
 	if `ivarweight'==0 {
@@ -1188,8 +1231,8 @@ qui {
 		egen x_total_onsig_weight 	= total(weight_j) 			if pval_orig_j>0.`sigdigits_ra'
 	}
 		
-	** original indicator sig, revised indicator sig at `sigdigits_ra'% level
-	foreach o_inds of local RF2_osig_list_nosfx {
+	** original indicator sig, revised indicator sig at `signum_ra'% level
+	foreach o_inds in `RF2_osig_list_nosfx' RF2_SIGagr_sigde2 {
 		if `ivarweight'==0 {
 			egen `o_inds'_osig_ra_all  = mean(`o_inds'_j) 									if pval_orig_j<=0.`sigdigits_ra'
 		}
@@ -1197,9 +1240,12 @@ qui {
 			egen `o_inds'_osig_ra_all  = total(`o_inds'_j*weight_j/x_total_osig_weight)   	if pval_orig_j<=0.`sigdigits_ra'
 		}
 	}			
-		
-	** original indicator insig, revised indicator sig at `sigdigits_ra'% level
-	foreach o_indn of local RF2_onsig_list_nosfx {
+	
+	drop RF2_SIGagr_sigdef_osig_ra_all   // RF2_SIGagr_sigdef_j is correct, but aggregating it across outcomes requires some of the missings to be set to zero, which is done in RF2_SIGagr_sigde2_j 
+	rename RF2_SIGagr_sigde2_osig_ra_all RF2_SIGagr_sigdef_osig_ra_all
+
+	** original indicator insig, revised indicator sig at `signum_ra'% level
+	foreach o_indn in `RF2_onsig_list_nosfx' RF2_SIGagr_sigde2 {
 		if `ivarweight'==0 {
 			egen `o_indn'_onsig_ra_all = mean(`o_indn'_j) 									if pval_orig_j>0.`sigdigits_ra'
 		}
@@ -1207,8 +1253,11 @@ qui {
 			egen `o_indn'_onsig_ra_all = total(`o_indn'_j*weight_j/x_total_onsig_weight) 	if pval_orig_j>0.`sigdigits_ra'
 		}
 	}
-		
-	** any original indicator sig level, revised indicator sig at `sigdigits_ra'% level
+	drop RF2_SIGagr_sigdef_onsig_ra_all 
+	rename RF2_SIGagr_sigde2_onsig_ra_all RF2_SIGagr_sigdef_onsig_ra_all
+	drop RF2_SIGagr_sigde2_j
+
+	** any original indicator sig level, revised indicator sig at `signum_ra'% level
 	if `ivarweight'==0 {
 		egen rany_osig_ra_all = mean(pval_orig_j<=0.`sigdigits_ra')
 	}
@@ -1219,9 +1268,17 @@ qui {
 		drop x_*
 	}
 
+	** droping and renaming variables for `studypooling'==1
 	if `studypooling'==1 {
-		drop pval_orig_j pval_orig_osig_* pval_orig_onsig_*	   
+		drop pval_orig_j pval_orig_osig_* pval_orig_onsig_*	  RF2_SIGcfm_uni_j  
+
+		rename RF2_SIGcfm_uni_all_j RF2_SIGcfm_uni_j 
+		rename RF2_SIGcfm_oa_all_j  RF2_SIGcfm_oa_j 
 	}
+
+	** any original and any revised indicator sig level
+	egen    RF2_SIGcfm_uni_all = mean(RF2_SIGcfm_uni_j)
+	egen    RF2_SIGcfm_oa_all = mean(RF2_SIGcfm_oa_j)
 
 
 *** Copy information to all outcomes/ studies
@@ -1276,7 +1333,7 @@ qui {
 		label var mainlist 					"Study reference"
 		label var mainlist_str				"Study reference, in string format" 
 	}
-	
+
 
 	foreach unit in j osig_oa_all onsig_oa_all {
 		capture label var pval_orig_`unit'	"p-value of original estimate`label_`unit''" 
@@ -1286,45 +1343,58 @@ qui {
 		label var RF_ESvar_`unit' 	"(RF.4) Effect sizes variation`label_`unit''"
 		label var RF_SIGvar_`unit' 	"(RF.5) Significance variation`label_`unit''"
 		if `shelvedind'==1 { 
-			label var RF_robratio_A_`unit' 	"(B1a) Robustness - sqrt of mean squared beta deviation divided by original s.e." 
-			label var RF_robratio_B_`unit' 	"(B1b) Robustness - sqrt of mean squared t/z-value deviation" 						
-			label var RF_pooledH_A_`unit' 	"(B2a) Pooled hypothesis test - z-statistic based on beta and se (inverse sign for negative original results)" 
-			label var RF_pooledH_B_`unit' 	"(B2b) Pooled hypothesis test - z-statistic based on t/z-score (inverse sign for negative original results)" 
+			label var RF_robratio_A_`unit' 	"(B1a) Robustness - sqrt of mean squared beta deviation divided by original s.e.`label_`unit''" 
+			label var RF_robratio_B_`unit' 	"(B1b) Robustness - sqrt of mean squared t/z-value deviation`label_`unit''" 						
+			label var RF_pooledH_A_`unit' 	"(B2a) Pooled hypothesis test - z-statistic based on beta and se (inverse sign for negative original results)`label_`unit''" 
+			label var RF_pooledH_B_`unit' 	"(B2b) Pooled hypothesis test - z-statistic based on t/z-score (inverse sign for negative original results)`label_`unit''" 
 		}
 	}	
 
-	foreach unit in j osig_ra_all {
-		label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
-		label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
-		label var RF2_ESrel_`unit' 			"(RF2.3) Relative effect size`label_`unit''"
-		label var RF2_ESvar_`unit'			"(RF2.4) Effect size variation`label_`unit''"
-		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance variation for insig. rep. results`label_`unit''"
-		label var RF2_ESagr_`unit'			"(RF2.6) Effect size agreement`label_`unit''"
-		label var RF2_SIGsw_btonsig_`unit'  "(RF2.7a) Significance switch (beta)`label_`unit''"	
-		label var RF2_SIGsw_setonsig_`unit' "(RF2.7b) Significance switch (se)`label_`unit''"	
+	foreach unit in j osig_ra_all onsig_ra_all {
+		label var RF2_SIGagr_`unit' 		"(RF1') Significance agreement`label_`unit''"
+		label var RF2_SIGagr_ndir_`unit' 	"(RF1') Significance agreement (opposite direction)`label_`unit''"
+		label var RF2_SIGvar_nsig_`unit' 	"(RF4') Significance variation for insig. rep. results`label_`unit''"
+		label var RF2_SIGcfm_uni_`unit'		"(RF6'b*) Sig. agreement (uniform alpha=0.`sigdigits_ra' applied)`label_`unit''"
+	}
+	foreach unit in osig_ra_all onsig_ra_all {
+		label var RF2_SIGcfm_oas_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, sig. rep. results only)`label_`unit''"
+		label var RF2_SIGcfm_oan_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, insig. rep. results only)`label_`unit''"
+		foreach cfmtype in oas oan uni {
+			note RF2_SIGcfm_`cfmtype'_`unit': This is an auxiliary indicator required for the correct colouring of circles in Robustness Dashboards that are aggregated across outcomes or studies   
+		}
+	}
 
+	foreach unit in j osig_ra_all {
+		label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (sig. because of more stringent OA sig. classification)`label_`unit''"
+		label var RF2_ESrel_`unit' 			"(RF2') Relative effect size`label_`unit''"
+		label var RF2_ESvar_`unit'			"(RF3') Effect size variation`label_`unit''"
+		label var RF2_ESagr_`unit'			"(RF7') Effect size agreement`label_`unit''"
+		label var RF2_SIGsw_btonsig_`unit'  "(RF8') Significance switch (beta)`label_`unit''"	
+		label var RF2_SIGsw_setonsig_`unit' "(RF9') Significance switch (se)`label_`unit''"	
 	}
 	foreach unit in j onsig_ra_all {
-		label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
-		label var RF2_SIGagr_sigdef_`unit'	"(RF2.1+) Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
-		label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
-		label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance variation for insig. rep. results`label_`unit''"
-		label var RF2_SIGvar_sig_`unit' 	"(RF2.5) Significance variation for sig. rep. results`label_`unit''"
-		label var RF2_SIGsw_btosig_`unit'	"(RF2.7a) Significance switch (beta)`label_`unit''"
-		label var RF2_SIGsw_setosig_`unit'	"(RF2.7b) Significance switch (se)`label_`unit''"
+		label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (insig. because of less stringent OA sig. classification)`label_`unit''"
+		label var RF2_SIGvar_sig_`unit' 	"(RF4') Significance variation for sig. rep. results`label_`unit''"
+		label var RF2_SIGsw_btosig_`unit'	"(RF8') Significance switch (beta)`label_`unit''"
+		label var RF2_SIGsw_setosig_`unit'	"(RF9') Significance switch (se)`label_`unit''"
 	}
+
+
 
 	if `signum_ra'!=5 {
 		foreach unit in j osig_ra_all onsig_ra_all {
-			label var RF2_SIGagr_05_`unit'	"(RF2.1b) Significance agreement (5% level)`label_`unit''"
+			label var RF2_SIGagr_05_`unit'	"(RF1') Significance agreement (5% level)`label_`unit''"
 		}
 	}
 	if `tFinclude'==1 {
 		foreach unit in j osig_ra_all onsig_ra_all {
-			label var RF2_SIGagr_05tF_`unit' "(RF2.1c) Significance agreement (5% tF level)`label_`unit''"
+			label var RF2_SIGagr_05tF_`unit' "(RF1') Significance agreement (5% tF level)`label_`unit''"
 		}
 	}
 	
+	label var RF2_SIGcfm_oa_j			"(RF6') Sig. classification agreement (OA's alpha applied to orig. results)`label_j'"
+	label var RF2_SIGcfm_uni_all		"(RF6') Overall sig. agreement (uniform alpha=0.`sigdigits_ra' applied)"
+	label var RF2_SIGcfm_oa_all			"(RF6') Overall sig. classification agreement (OA's alpha applied to orig. results)"
 	label var rany_osig_ra_all			"Any rep. analysis is significant wrt REP sig. level`label_osig_ra_all'" 
 
 
@@ -1336,7 +1406,7 @@ qui {
 *** Create dataset at study level
   	if `studypooling'==0 {
 		keep *_all 
-		drop rany_osig_ra_all
+		drop rany_osig_ra_all 
 		duplicates drop
 	
 		gen outcomes_N = `N_outcomes'
@@ -1378,14 +1448,14 @@ qui {
 
 
 ********************************************************************************
-*****  PART 5  SENSITIVITY DASHBOARD VISUALIZATION 
+*****  PART 5  ROBUSTNESS DASHBOARD VISUALIZATION 
 ********************************************************************************
 	
 ************************************************************
 ***  PART 5.A  PREPARE DASHBOARD GRAPH DATA
 ************************************************************
 
-	if `sensdash'==1 {
+	if `dashboard'==1 {
 		use `data_j'
 		if `studypooling'==0 {
 			keep mainlist mainlist_str beta_orig_j beta_rel_orig_j pval_orig_j RF2_* rany* 
@@ -1394,18 +1464,74 @@ qui {
 		else {
 			rename pval_orig_ra_j pval_orig_j
 			keep mainlist mainlist_str pval_orig_j RF2_* rany*
+			keep if pval_orig_j!=.
 			local ind_level stud
 		}
+	
+
+*** Colour definition
+		if (c(version)>=14.2) {
+			colorpalette lin fruit, nograph
+			local col p3
+			local col_lowint  0.35
+			local col_highint 0.8
+		}
+		else {	
+			colorpalette9, nograph
+			local col p1
+			local col_lowint  0.25
+			local col_highint 0.55
+		}
+		local r_col `r(`col')'
+		 
+
+*** Histogram on confirmatory results by outcome or study
+		// needs to be done at this stage where 1 study = 1 obs (effectively twice in the dataset for `studypooling'==1, once for originally sig and once for originally insig results, but that does not change the look of the histogram)
+
+		** aggregate confirmatory results statistics
+		local share_confirm_uni_all = round(RF2_SIGcfm_uni_all)
+		local share_confirm_oa_all  = round(RF2_SIGcfm_oa_all)
+		local xlabadd
+		local note_asterisk
+		local note_share_cfm 
+		if `sigdigits_ra'!=`sigdigits_oa' & `sigdigits_ra'!=999 & `share_confirm_uni_all'!=`share_confirm_oa_all' {
+			local note_asterisk         *
+			local note_share_cfm 		"{it: * = with uniform {&alpha}=0.`sigdigits_ra': `share_confirm_uni_all'%}"
+		}
+
+		gen     x_RF2_ESrel_abs_j     = abs(RF2_ESrel_j)
+		replace x_RF2_ESrel_abs_j     = 102 if x_RF2_ESrel_abs_j>102 & x_RF2_ESrel_abs_j<.
+		 gen x_RF2_ESrel_abs_above    = (x_RF2_ESrel_abs_j==102)
+		egen x_RF2_ESrel_abs_anyabove = max(x_RF2_ESrel_abs_above)
+		if x_RF2_ESrel_abs_anyabove==1 {
+			label define abs_axis 105 "100+"  
+		 	label val RF2_SIGcfm_oa_j abs_axis
+			local xlabadd 105 
+		}
+		local   x_RF2_SIGcfm_intens = `col_lowint'+(RF2_SIGcfm_oa_all/100)*(`col_highint'-`col_lowint')  
+        gen     x_RF2_SIGcfm_color = "`r_col'*`x_RF2_SIGcfm_intens'"
+        
+	
+		set graphics off
+		twoway (histogram RF2_SIGcfm_oa_j,  start(0) width(5) lcolor(white) fcolor("`=x_RF2_SIGcfm_color[1]'"))   ///    
+		       (histogram x_RF2_ESrel_abs_j, start(0) width(5) lcolor(black) fcolor(none)),  ///
+			   xline(`= RF2_SIGcfm_oa_all') /*xline(`= RF2_SIGcfm_uni_all', lcolor(gs6))*/  ///
+			   xscale(range(-10 110) alt) xlabel(0(20)100 `xlabadd', labsize(vsmall) valuelabel) xtitle("%", size(vsmall))  yscale(off) ylabel(, nogrid) ///
+			   legend(order(1 "`=ustrunescape("\u039A")'  (`=ustrunescape("\u0305\u039A")'=`share_confirm_oa_all'%`note_asterisk')"  2 "|`=ustrunescape("\u03B2")'| (double sig. results only)") holes(3 4) note("`note_share_cfm'", size(small))) ///
+			   fysize(15) aspectratio(0.075) scheme(white_tableau) name(hist_SIGcfm, replace)
+		set graphics on
+		drop x_*
+
 
 *** Prepare data structure and y- and x-axis
 		if `signum_ra'!=999 { 
-			local siglab 	{it:p}{&ge}0.`sigdigits_ra'
+			local siglab 	{it:p}>0.`sigdigits_ra'
 		}
 		else {
 			local siglab 	varying sig. levels		// `signum_ra'==999 can effectively only occur for `studypooling'==1 
 		}
 
-		** create local indicating number of outcomes/ studies with estimates falling into category of insig rep. analyses only because of more stringent sig. level definition in rep. analysis than in orig. analysis
+		** create local indicating number of outcomes/ studies with estimates falling into category of insig (sig) rep. analyses only because of more (less) stringent sig. level definition in rep. analysis than in orig. analysis
 		egen x_notes_sigdef = total(RF2_SIGagr_sigdef_j!=.)
 		local notes_sigdef_N = x_notes_sigdef 
 		drop x_notes_sigdef
@@ -1414,42 +1540,42 @@ qui {
 			keep if inlist(mainlist,1)       	// keep one observation across outcomes/ studies
 			drop mainlist mainlist_str *_j		// drop variables at outcome/ study level 
 			if `studypooling'==0 {
-				local ylab 1 `" "significant" " " "{sup:`osig_ra_out_share' outcomes}" "'      										2 `" "insignificant" "(`siglab')" " " "{sup:`onsig_ra_out_share' outcomes}" "'	// first y entry shows up at bottom of y-axis of the dashboard
+				local ylab 1 `" "significant" " " "{it:`osig_ra_out_share' outcomes}" "'      										2 `" "insignificant" "(`siglab')" " " "{it:`onsig_ra_out_share' outcomes}" "'	// first y entry shows up at bottom of y-axis of the dashboard
 			}
 			else {
-				local ylab 1 `" "significant" " " "{sup:`osig_ra_out_share' outcomes in}" "{sup:`osig_ra_stud_share' studies}" "' 	2 `" "insignificant" "(`siglab')" " " "{sup:`onsig_ra_out_share' outcomes in}" "{sup:`onsig_ra_stud_share' studies}" "'	
+				local ylab 1 `" "significant" " " "{it:`osig_ra_out_share' outcomes in}" "{it:`osig_ra_stud_share' studies}" "' 	2 `" "insignificant" "(`siglab')" " " "{it:`onsig_ra_out_share' outcomes in}" "{it:`onsig_ra_stud_share' studies}" "'	
 				duplicates drop
 			}
 			expand 2
-			gen sensd_y = _n
+			gen dashbrd_y = _n
 			local yset_n = 2 
 		}
 		else { 
 			sort mainlist
-			rename mainlist sensd_y
+			rename mainlist dashbrd_y
 			local yset_n = `N_outcomes'			// # of items shown on y-axis = # of outcomes
 			
 			** reverse order of outcome numbering as outcomes are presented in reverse order on the y-axis of the dashboard
-			tostring sensd_y, replace
-			labmask sensd_y, values(mainlist_str) lblname(ylab)	
+			tostring dashbrd_y, replace
+			labmask dashbrd_y, values(mainlist_str) lblname(ylab)	
 			
 			if `N_outcomes'==1 {
-				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'"  "'
+				local ylab `"   `=dashbrd_y[1]' "`=mainlist_str[1]'"  "'
 			}
 			if `N_outcomes'==2 | `N_outcomes'==3 {
-				recode sensd_y (1=`N_outcomes') (`N_outcomes'=1)
-				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'" `=sensd_y[2]' "`=mainlist_str[2]'"  "'
+				recode dashbrd_y (1=`N_outcomes') (`N_outcomes'=1)
+				local ylab `"   `=dashbrd_y[1]' "`=mainlist_str[1]'" `=dashbrd_y[2]' "`=mainlist_str[2]'"  "'
 			}
 			if `N_outcomes'==3 {
-				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'" `=sensd_y[2]' "`=mainlist_str[2]'" `=sensd_y[3]' "`=mainlist_str[3]'" "'
+				local ylab `"   `=dashbrd_y[1]' "`=mainlist_str[1]'" `=dashbrd_y[2]' "`=mainlist_str[2]'" `=dashbrd_y[3]' "`=mainlist_str[3]'" "'
 			}	
 			if `N_outcomes'==4 {
-				recode sensd_y (1=4) (4=1) (2=3) (3=2)
-				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'" `=sensd_y[2]' "`=mainlist_str[2]'" `=sensd_y[3]' "`=mainlist_str[3]'" `=sensd_y[4]' "`=mainlist_str[4]'"  "'
+				recode dashbrd_y (1=4) (4=1) (2=3) (3=2)
+				local ylab `"   `=dashbrd_y[1]' "`=mainlist_str[1]'" `=dashbrd_y[2]' "`=mainlist_str[2]'" `=dashbrd_y[3]' "`=mainlist_str[3]'" `=dashbrd_y[4]' "`=mainlist_str[4]'"  "'
 			}
 			if `N_outcomes'==5 {
-				recode sensd_y (1=5) (5=1) (2=4) (4=2)
-				local ylab `"   `=sensd_y[1]' "`=mainlist_str[1]'" `=sensd_y[2]' "`=mainlist_str[2]'" `=sensd_y[3]' "`=mainlist_str[3]'" `=sensd_y[4]' "`=mainlist_str[4]'" `=sensd_y[5]' "`=mainlist_str[5]'"  "'
+				recode dashbrd_y (1=5) (5=1) (2=4) (4=2)
+				local ylab `"   `=dashbrd_y[1]' "`=mainlist_str[1]'" `=dashbrd_y[2]' "`=mainlist_str[2]'" `=dashbrd_y[3]' "`=mainlist_str[3]'" `=dashbrd_y[4]' "`=mainlist_str[4]'" `=dashbrd_y[5]' "`=mainlist_str[5]'"  "'
 			}
 			
 			if `N_outcomes'>5 {
@@ -1465,7 +1591,7 @@ qui {
 		local xset_n : word count `xset'
 		
 		expand `xset_n'
-		bysort sensd_y: gen sensd_x = _n
+		bysort dashbrd_y: gen dashbrd_x = _n
 		
 		
 		** labelling of y-axis 
@@ -1478,38 +1604,52 @@ qui {
 		}
 		
 
-*** Calculate main shares presented in Sensitivity Dashboard
+*** Calculate main shares presented in Robustness Dashboard
 		if `aggregation'==1 {
 			// in order to calculate the shares in ALL original results [and not differentiated by originally sig or insig] multiply x_share_2x and `styper'_onsig_ra_all by (1 - rany_osig_ra_all) and x_share_1x and `styper'_osig_ra_all by rany_osig_ra_all
-			gen x_share_21 =  100 - RF2_SIGagr_onsig_ra_all - RF2_SIGagr_ndir_onsig_ra_all	if sensd_y==2 & sensd_x==1	// top left     (insig orig & insig rev)            = (100 - sig rev)
-			gen x_share_22 =                               	  RF2_SIGagr_ndir_onsig_ra_all	if sensd_y==2 & sensd_x==2	// top middle   (insig orig & sig   rev, diff sign) =        sig rev not dir
-			gen x_share_23 =        RF2_SIGagr_onsig_ra_all					 				if sensd_y==2 & sensd_x==3	// top right    (insig orig & sig   rev, same sign) =        sig rev     dir
+			gen x_share_21 =  100 - RF2_SIGagr_onsig_ra_all - RF2_SIGagr_ndir_onsig_ra_all	if dashbrd_y==2 & dashbrd_x==1	// top left     (insig orig & insig rev)            = (100 - sig rev)
+			gen x_share_22 =                               	  RF2_SIGagr_ndir_onsig_ra_all	if dashbrd_y==2 & dashbrd_x==2	// top middle   (insig orig & sig   rev, diff sign) =        sig rev not dir
+			gen x_share_23 =        RF2_SIGagr_onsig_ra_all					 				if dashbrd_y==2 & dashbrd_x==3	// top right    (insig orig & sig   rev, same sign) =        sig rev     dir
 			
-			gen x_share_11 =  100 - RF2_SIGagr_osig_ra_all - RF2_SIGagr_ndir_osig_ra_all	if sensd_y==1 & sensd_x==1  // bottom left   (sig & insig)			 	=   (100 - sig rev)
-			gen x_share_12 =                                 RF2_SIGagr_ndir_osig_ra_all  	if sensd_y==1 & sensd_x==2	// bottom middle (sig & sig, diff sign)		=   (100 - sig rev not dir)
-			gen x_share_13 =        RF2_SIGagr_osig_ra_all 			     			  		if sensd_y==1 & sensd_x==3	// bottom right  (sig & sig, same sign)		=	(100 - sig rev     dir)
+			gen x_share_11 =  100 - RF2_SIGagr_osig_ra_all - RF2_SIGagr_ndir_osig_ra_all	if dashbrd_y==1 & dashbrd_x==1  // bottom left   (sig & insig)			 	=   (100 - sig rev)
+			gen x_share_12 =                                 RF2_SIGagr_ndir_osig_ra_all  	if dashbrd_y==1 & dashbrd_x==2	// bottom middle (sig & sig, diff sign)		=   (100 - sig rev not dir)
+			gen x_share_13 =        RF2_SIGagr_osig_ra_all 			     			  		if dashbrd_y==1 & dashbrd_x==3	// bottom right  (sig & sig, same sign)		=	(100 - sig rev     dir)
 			
-			for num 1/3: replace x_share_1X  = 0 											if sensd_y==1 & sensd_x==X & rany_osig_ra_all==0 & x_share_1X==.			// replace missing by zero if none of the original estimates was sig
-			for num 1/3: replace x_share_2X  = 0 											if sensd_y==2 & sensd_x==X & rany_osig_ra_all==1 & x_share_2X==.   		// replace missing by zero if all of the original estimates were sig								
+			for num 1/3: replace x_share_1X  = 0 											if dashbrd_y==1 & dashbrd_x==X & rany_osig_ra_all==0 & x_share_1X==.			// replace missing by zero if none of the original estimates was sig
+			for num 1/3: replace x_share_2X  = 0 											if dashbrd_y==2 & dashbrd_x==X & rany_osig_ra_all==1 & x_share_2X==.   		// replace missing by zero if all of the original estimates were sig								
 			 
 			foreach styper in `RF2_SIGagr_05' {
 				replace `styper'_onsig_ra_all 	= `styper'_onsig_ra_all  // top right  (insig orig & sig rev)
 				replace `styper'_osig_ra_all   = `styper'_osig_ra_all    // bottom right (sig orig & sig rev)
 			}
-			gen share2_11 = . 
-			gen share2_21 =    RF2_SIGagr_sigdef_onsig_ra_all  							if sensd_y==2 & sensd_x==1 // !=. if original authors adopted different sig. level than rep. analysis
+			// share2 = second circle to show share on analysis paths that are not confirmatory with OAs significance classification 																						
+			gen share2_21 =    RF2_SIGagr_sigdef_onsig_ra_all  							if dashbrd_y==2 & dashbrd_x==1 	// !=. if original authors adopted different sig. level than rep. analysis
+			gen share2_23 = .
+			gen share2_11 = .
+			gen share2_13 =    RF2_SIGagr_sigdef_osig_ra_all  							if dashbrd_y==1 & dashbrd_x==3
 		}		
 		else {
-			for num 1/`yset_n': gen x_share_X1 = 100 - RF2_SIGagr_j - RF2_SIGagr_ndir_j	if sensd_y==X	& sensd_x==1	// insig outcome X
-			for num 1/`yset_n': gen x_share_X2 =                      RF2_SIGagr_ndir_j if sensd_y==X	& sensd_x==2	//   sig outcome X, not dir
-			for num 1/`yset_n': gen x_share_X3 =       RF2_SIGagr_j  					if sensd_y==X	& sensd_x==3	//   sig outcome X, same dir
+			for num 1/`yset_n': gen x_share_X1 = 100 - RF2_SIGagr_j - RF2_SIGagr_ndir_j	if dashbrd_y==X	& dashbrd_x==1	// insig outcome X
+			for num 1/`yset_n': gen x_share_X2 =                      RF2_SIGagr_ndir_j if dashbrd_y==X	& dashbrd_x==2	//   sig outcome X, not dir
+			for num 1/`yset_n': gen x_share_X3 =       RF2_SIGagr_j  					if dashbrd_y==X	& dashbrd_x==3	//   sig outcome X, same dir
 		
-			// create variables with indicator information availabe in all observations
+			// create variables with indicator information available in all observations
 			foreach var in beta_orig_j beta_rel_orig_j pval_orig_j  `RF2_list_j'  {
-				for num 1/`yset_n': gen   x_`var'X = `var' if sensd_y==X
+				for num 1/`yset_n': gen   x_`var'X = `var' if dashbrd_y==X
 				for num 1/`yset_n': egen    `var'X = mean(x_`var'X)	
 			}
-			for num 1/`yset_n': gen share2_X1 =	RF2_SIGagr_sigdef_j           			if sensd_y==X & sensd_x==1	
+			if `signum_ra'<`signum_oa' {
+				for num 1/`yset_n': gen share2_X1 =	RF2_SIGagr_sigdef_j           			if dashbrd_y==X & dashbrd_x==1	
+				for num 1/`yset_n': gen share2_X3 =	.					           			if dashbrd_y==X & dashbrd_x==3
+			}
+			if `signum_ra'>`signum_oa' {
+				for num 1/`yset_n': gen share2_X1 =	.					           			if dashbrd_y==X & dashbrd_x==1	
+				for num 1/`yset_n': gen share2_X3 =	RF2_SIGagr_sigdef_j           			if dashbrd_y==X & dashbrd_x==3	
+			}
+			if `signum_ra'==`signum_oa' {
+				for num 1/`yset_n': gen share2_X1 =	. 					          			if dashbrd_y==X & dashbrd_x==1
+				for num 1/`yset_n': gen share2_X3 =	. 					          			if dashbrd_y==X & dashbrd_x==3	
+			}
 		}
 		
 
@@ -1524,58 +1664,85 @@ qui {
 				replace share_`qy'`qx' = round(share_`qy'`qx')
 			}
 			replace share2_`qy'1 = round(share2_`qy'1)
+			replace share2_`qy'3 = round(share2_`qy'3)
 		}
-		
+
 		** create single variables share, x_sharerounder, and share2 from share_*, x_sharerounder_*, and share2_*
 		foreach shvar3 in share x_sharerounder share2 {		
 						    	gen     `shvar3' = .
-			for num 1/`yset_n': replace `shvar3' = `shvar3'_X1 if sensd_y==X & sensd_x==1
+			for num 1/`yset_n': replace `shvar3' = `shvar3'_X1 if dashbrd_y==X & dashbrd_x==1 & `shvar3'_X1!=.
+			for num 1/`yset_n': replace `shvar3' = `shvar3'_X3 if dashbrd_y==X & dashbrd_x==3 & `shvar3'_X3!=.
 		}
 		foreach shvar2 in share x_sharerounder {		
-			for num 1/`yset_n': replace `shvar2' = `shvar2'_X2 if sensd_y==X & sensd_x==2
-			for num 1/`yset_n': replace `shvar2' = `shvar2'_X3 if sensd_y==X & sensd_x==3
+			for num 1/`yset_n': replace `shvar2' = `shvar2'_X2 if dashbrd_y==X & dashbrd_x==2
 		}		
 		
 		                    gen     share_roundingdiff = .
-		for num 1/`yset_n': replace share_roundingdiff = 100-(share_X1 + share_X2 + share_X3) if sensd_y==X
-		for num 1/`yset_n': replace share_roundingdiff = 0 if sensd_y==X & (share_X1 + share_X2 + share_X3 == 0)   // no rounding if entire row is zero, which may happen with -aggregation(1)- if none of the studied outcomes/ studies has (in)sig orig. estimates.
+		for num 1/`yset_n': replace share_roundingdiff = 100-(share_X1 + share_X2 + share_X3) if dashbrd_y==X
+		for num 1/`yset_n': replace share_roundingdiff = 0 if dashbrd_y==X & (share_X1 + share_X2 + share_X3 == 0)   // no rounding if entire row is zero, which may happen with -aggregation(1)- if none of the studied outcomes/ studies has (in)sig orig. estimates.
 		
 		** sum of shares exceeds 100%
-		bysort sensd_y: egen sharerounder = rank(x_sharerounder) if x_sharerounder>=0.5 & share_roundingdiff<0, unique
+		gen x_sharerounderpool = (x_sharerounder>=0.5 & share_roundingdiff<0)
+		sort dashbrd_y x_sharerounderpool share x_sharerounder  // make sure that, if two shares have the same digit (e.g. 62.5 and 37.5), the lower one is always rounded down (here: 37.5 to 37); -egen [...] rank(x_sharerounder), unique- would have been easier, but ranks arbitrarily if digits are identical 
+		by dashbrd_y x_sharerounderpool: gen sharerounder = _n
+		replace sharerounder = . if x_sharerounderpool==0	
 		replace share     = share  - 1 if sharerounder<=abs(share_roundingdiff)    // the X shares with the lowest digits are reduced in cases where the sum of shares is 10X
 		replace share2    = share2 - 1 if sharerounder<=abs(share_roundingdiff) & share2!=. & share2!=0
-		drop sharerounder
+		drop x_sharerounderpool sharerounder
 
-		** sum of shares falls below 100% 
-		bysort sensd_y: egen sharerounder = rank(x_sharerounder) if x_sharerounder<0.5 & share_roundingdiff>0, field
+		** sum of shares falls below 100%
+		gen x_sharerounderpool = (x_sharerounder<0.5 & share_roundingdiff>0)
+		gsort dashbrd_y x_sharerounderpool -share x_sharerounder  // make sure that, if two shares have the same digit (e.g. 54.4 and 22.4), the higher one is always rounded up (here: 54.4 to 55)  
+		by dashbrd_y x_sharerounderpool: gen sharerounder = _n
+		replace sharerounder = . if x_sharerounderpool==0
 		replace share     = share  + 1 if sharerounder<=share_roundingdiff		// the X shares with the highest digits are increased in cases where the sum of shares is 100 - X
 		replace share2    = share2 + 1 if sharerounder<=abs(share_roundingdiff) & share2!=.
 		
 		** recreate variables with indicator information availabe in all observations for RF2_SIGagr_sigdef_j (after share2 has been properly rounded)
 		if `aggregation'==0 {	
 			drop x_RF2_SIGagr_sigdef_j*	RF2_SIGagr_sigdef_j*	
-			for num 1/`yset_n': gen   x_RF2_SIGagr_sigdef_jX = share2 if sensd_y==X & sensd_x==1	
+			if `signum_ra'<`signum_oa' {
+				for num 1/`yset_n': gen   x_RF2_SIGagr_sigdef_jX = share2 if dashbrd_y==X & dashbrd_x==1	
+			}
+			if `signum_ra'>`signum_oa' {
+				for num 1/`yset_n': gen   x_RF2_SIGagr_sigdef_jX = share2 if dashbrd_y==X & dashbrd_x==3
+			}
+			if `signum_ra'==`signum_oa' {
+				for num 1/`yset_n': gen   x_RF2_SIGagr_sigdef_jX = .
+			}
 			for num 1/`yset_n': egen    RF2_SIGagr_sigdef_jX = mean(x_RF2_SIGagr_sigdef_jX)	
 		}
 
-		** ... now also for RF2_SIGagr_sigdef_onsig_ra_all
+
+		** ... now also for RF2_SIGagr_sigdef_onsig_ra_all and RF2_SIGagr_sigdef_osig_ra_all
 		else {
-			gen x_RF2_SIGagr_sigdef_onsig_ra_all = share2 if sensd_y==2 & sensd_x==1
-			drop  RF2_SIGagr_sigdef_onsig_ra_all   // replace by rounded indicator
-			egen  RF2_SIGagr_sigdef_onsig_ra_all = mean(x_RF2_SIGagr_sigdef_onsig_ra_all)	
+			gen x_RF2_SIGagr_sigdef_onsig_ra_all = share2 if dashbrd_y==2 & dashbrd_x==1
+			gen x_RF2_SIGagr_sigdef_osig_ra_all  = share2 if dashbrd_y==1 & dashbrd_x==3
+			foreach o in onsig osig {
+				drop  RF2_SIGagr_sigdef_`o'_ra_all   // replace by rounded indicator
+				egen  RF2_SIGagr_sigdef_`o'_ra_all = mean(x_RF2_SIGagr_sigdef_`o'_ra_all)	
+			}
 		}
 
-		** separate share_size variable as basis for the size fo circles in the dashboard given that share_size may differ from share if original authors applied different sig. level than rep. analysis
+		** adjust colouring of circles according to significance classification agreement if `aggregation'==1
+		if `aggregation'==1 {
+			replace share2 = RF2_SIGcfm_oas_onsig_ra_all									if dashbrd_y==2 & dashbrd_x==3
+			replace share2 = RF2_SIGcfm_uni_onsig_ra_all  - RF2_SIGcfm_oan_onsig_ra_all  	if dashbrd_y==2 & dashbrd_x==1 // share_21 - confirmatory part of share_21
+			replace share2 = RF2_SIGcfm_oan_osig_ra_all 									if dashbrd_y==1 & dashbrd_x==1
+			replace share2 = RF2_SIGcfm_uni_osig_ra_all   - RF2_SIGcfm_oas_osig_ra_all		if dashbrd_y==1 & dashbrd_x==3 // share_13 - confirmatory part of share_13 			
+		}
+
+		** separate share_size variable as basis for the size of circles in the dashboard given that share_size may differ from share if original authors applied different sig. level than rep. analysis
 		gen     share_size = share
 		replace share_size = share - share2 if share2!=.
 
-		drop x_* share_roundingdiff share2 share2_*
+		drop x_* share_roundingdiff share2_*
 		capture drop sharerounder
 
 		gen     share2_size = share   // size of larger circle corresponds to share 
 
 
-*** Further rounding of indicators for presentation in the dashboard 
+*** Further rounding of indicators for presentation in the dashboard
 		if `aggregation'==0 {			
 			foreach rI in  beta_rel_orig_j   RF2_ESagr_j    `RF2_SIGagr_j' 		   `RF2_SIGagr_05_j'      RF2_ESrel_j 	 RF2_ESvar_j {
 				for num 1/`yset_n': replace `rI'X = round(`rI'X)
@@ -1594,43 +1761,31 @@ qui {
 ************************************************************
 	  
 *** Colouring of circles: lighter colour if non-confirmatory revised result, darker colour if confirmatory revised result
-		if (c(version)>=14.2) {
-			colorpalette lin fruit, nograph
-			local col p3
-			local col_lowint  0.35
-			local col_highint 0.8
-		}
-		else {	
-			colorpalette9, nograph
-			local col p1
-			local col_lowint  0.25
-			local col_highint 0.55
-		}
-		
-		gen     colorname_nonconfirm = "`r(`col')'*`col_lowint'"		// definition of colour used for non-confirmatory and confirmatory results - required for legend to dashboard graph
-		gen     colorname_confirm    = "`r(`col')'*`col_highint'"
+		// colour definition above under PART 5.A	
+		gen     colorname_nonconfirm = "`r_col'*`col_lowint'"		// definition of colour used for non-confirmatory and confirmatory results - required for legend to dashboard graph
+		gen     colorname_confirm    = "`r_col'*`col_highint'"
 		
 		gen     colorname     = colorname_nonconfirm
 		gen     colorname_not = colorname_confirm		// required for overlapping two circles when original authors defined stat. significance differently from the rep. analysis
 		if `aggregation'==0 {
 			forval m = 1/`yset_n' {
-				replace colorname     = colorname_confirm     if sensd_y==`m' & sensd_x==3 & pval_orig_j`m'<=0.`sigdigits_ra'
-				replace colorname     = colorname_confirm     if sensd_y==`m' & sensd_x==1 & pval_orig_j`m'>0.`sigdigits_ra'
+				replace colorname     = colorname_confirm     if dashbrd_y==`m' & dashbrd_x==3 & pval_orig_j`m'<=0.`sigdigits_oa'
+				replace colorname     = colorname_confirm     if dashbrd_y==`m' & dashbrd_x==1 & pval_orig_j`m'>0.`sigdigits_oa'
 
-				replace colorname_not = colorname_nonconfirm  if sensd_y==`m' & sensd_x==1 & pval_orig_j`m'>0.`sigdigits_ra'
+				replace colorname_not = colorname_nonconfirm  if dashbrd_y==`m' & dashbrd_x==1 & pval_orig_j`m'>0.`sigdigits_oa'
 			}
 		}
 		else {
-			replace colorname     = colorname_confirm     if (sensd_y==2 & sensd_x==1) | (sensd_y==1 & sensd_x==3)
-			replace colorname_not = colorname_nonconfirm  if (sensd_y==2 & sensd_x==1)
+			replace colorname     = colorname_confirm     if (dashbrd_y==2 & dashbrd_x==1) | (dashbrd_y==1 & dashbrd_x==3)
+			replace colorname_not = colorname_nonconfirm  if (dashbrd_y==2 & dashbrd_x==1) | (dashbrd_y==1 & dashbrd_x==3)
 		}
 	
 
 *** Saving the plotting codes in locals
 		local slist ""
 		forval i = 1/`=_N' {
-			local slist "`slist' (scatteri `=sensd_y[`i']' `=sensd_x[`i']'                                     , mlabposition(0) mlabsize(medsmall) msize(`=share2_size[`i']*0.5*(0.75^(`yset_n'-2))') mcolor("`=colorname_not[`i']'"))"     // first add second circle for different stat. sig. definitions adopted by original authors and in rep. analysis, respectively
-			local slist "`slist' (scatteri `=sensd_y[`i']' `=sensd_x[`i']' "`: display %3.0f =share[`i'] "%" '", mlabposition(0) mlabsize(medsmall) msize(`=share_size[`i']*0.5*(0.75^(`yset_n'-2))')  mcolor("`=colorname[`i']'"))"     // msize defines the size of the circles
+			local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']'                                     , mlabposition(0) mlabsize(medsmall) msize(`=share2_size[`i']*0.5*(0.75^(`yset_n'-2))') mcolor("`=colorname_not[`i']'"))"     // first add second circle for different stat. sig. definitions adopted by original authors and in rep. analysis, respectively
+			local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']' "`: display %3.0f =share[`i'] "%" '", mlabposition(0) mlabsize(medsmall) msize(`=share_size[`i']*0.5*(0.75^(`yset_n'-2))')  mcolor("`=colorname[`i']'"))"     // msize defines the size of the circles
 		}
 	
 		if "`signfirst'"=="" {
@@ -1651,7 +1806,7 @@ qui {
 		forval m = 1/`yset_n_dash' {		
 			if `aggregation'==0  {
 				local case_s `m'
-				local case_n `m'
+				local case_n `m'	// suffixes only differ for `aggregation'==1
 				local sfx_s  j`m'
 				local sfx_n  j`m'
 				forval yt = 1(2)3 {
@@ -1692,7 +1847,7 @@ qui {
 					local sign_d_orig`m' "+/-" 
 				}
 
-				if beta_rel_orig_j==. {
+				if beta_rel_orig_j`m'==. {
 					local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1]'"   													"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" "'
 				}
 				else {
@@ -1702,8 +1857,8 @@ qui {
 
 			** fill dashboard matrix, with originally significant [R=s] (insignificant [R=n]) rows and columns C=1, ..., n of the dashboard identified by cond_RC
 			if `cond_n1' {
-				if RF2_SIGagr_sigdef_`sfx_n'!=. {  
-					local y`case_n'x1	`"  "`: display "{it:p}<{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
+				if (RF2_SIGagr_sigdef_`sfx_n'!=. & `sigdigits_ra'<`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_n'!=. & `studypooling'==1) {  
+					local y`case_n'x1	`"  "`: display "{it:p}{&le}{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
 				}
 				else {
 					local y`case_n'x1  	`"  	 																	    "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
@@ -1712,9 +1867,9 @@ qui {
 			if `cond_n3' {
 				if `tFinclude'!=1 {
 					if `signum_ra'!=5  {
-							local y`case_n'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"  		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"  		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
 						if "`extended'"=="SIGswitch" | "`extended'"=="both" {
-							local y`case_n'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"         "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"      										"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%" '"   "`: display "low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'
+							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"         "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"      										"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%" '"   "`: display "low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'
 						}
 					}
 					if `signum_ra'==5  {
@@ -1726,9 +1881,9 @@ qui {
 				}
 				if `tFinclude'==1 {
 					if `signum_ra'!=5 {
-							local y`case_n'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
 						if "`extended'"=="SIGswitch" | "`extended'"=="both" { 
-							local y`case_n'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '"   	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%" '"   "`: display "low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	
+							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '"   	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%" '"   "`: display "low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	
 						}
 					}
 					if `signum_ra'==5 {
@@ -1757,18 +1912,38 @@ qui {
 			if `cond_s3' {
 				if `tFinclude'==1 {
 					if `signum_ra'!=5 {
-						local y`case_s'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  
+							local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
+						if RF2_SIGagr_sigdef_`sfx_s'==. {
+							local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
 					}
 					if `signum_ra'==5 {
-						local y`case_s'x3	`" "`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
+							local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'	
+						}
+						if RF2_SIGagr_sigdef_`sfx_s'==. {
+							local y`case_s'x3	`" 																				"`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
 					}
 				}
 				if `tFinclude'!=1 {
 					if `signum_ra'!=5 {
-						local y`case_s'x3	`" "`: display "{it:p}<0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
+							local y`case_s'x3	`" 	"`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
+						if RF2_SIGagr_sigdef_`sfx_s'==. {
+							local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
 					}
 					if `signum_ra'==5 {
-						local y`case_s'x3	`" 																												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {
+							local y`case_s'x3	`" "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"																												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'  	
+						}
+						if RF2_SIGagr_sigdef_`sfx_s'==. {
+							local y`case_s'x3	`" 																																															"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						}
 					}
 				}
 			}	
@@ -1793,24 +1968,40 @@ qui {
 		}
 		
 		local yupper = 2.5 + (`yset_n'-2)*0.9
-		
+
+
+*** Legend subtitle
+		if `sigdigits_ra'!=`sigdigits_oa' & `sigdigits_oa'!=999 & `sigdigits_ra'!=999 {
+			local subtitle_sigagr	`" "Significance classification agreement ({&kappa})" "({&alpha}{sup:o}=0.`sigdigits_oa' applied to original results)" "' 
+		}
+		if `sigdigits_oa'==999 {
+			local subtitle_sigagr	`" "Significance classification agreement ({&kappa})" "(varying {&alpha}{sup:o} applied to original results)" "' 
+		}
+		if `sigdigits_ra'==`sigdigits_oa' {
+			local subtitle_sigagr	Significance agreement ({&kappa})
+		}
+
 
 			
 ************************************************************
 ***  PART 5.C  PLOTTING OF THE DASHBOARD
 ************************************************************
 
-		twoway (scatteri `=sensd_y[0]' `=sensd_x[0]', mcolor("`=colorname_confirm[1]'")) (scatteri `=sensd_y[0]' `=sensd_x[0]', mcolor("`=colorname_nonconfirm[1]'")) ///
+		twoway (scatteri `=dashbrd_y[0]' `=dashbrd_x[0]', mcolor("`=colorname_confirm[1]'") msize(*2)) (scatteri `=dashbrd_y[0]' `=dashbrd_x[0]', mcolor("`=colorname_nonconfirm[1]'") msize(*2)) ///
 			`slist', ///
 			`ytitle' xtitle("Robustness results") ///
 			xscale(range(`xleft' 3.5) /*alt*/) yscale(range(0.5 `yupper')) ///
 			xlabel(`xlab', labsize(2.5)) ylabel(`ylab', labsize(2.5)) ///
 			`t_col0' `t_col0b' `t_col1' `t_col3'  ///
-			legend(rows(1) order(1 "confirmatory robustness results" 2 "non-confirmatory robustness results") size(2.5) position(6) bmargin(tiny))  ///
-			graphregion(color(white)) scheme(white_tableau)  
+			legend(rows(1) order(1 "yes" 2 "no") position(6) bmargin(tiny) size(2) subtitle(`subtitle_sigagr', size(vsmall)))  ///
+			graphregion(color(white) margin(top)) scheme(white_tableau) name(dashboard_main, replace)
 				// first line of this twoway command does not show up in the dashboard but is required to make the legend show up with the correct colours 
 			
-		graph export "`filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'", replace as(`graphfmt')
+		if `aggregation'==1 {
+			graph combine dashboard_main hist_SIGcfm, hole(2) imargin(zero) commonscheme scheme(white_tableau)
+		}
+
+		graph export "`filepath'/repframe_dashboard_`ind_level'_`fileidentifier'.`graphfmt'", replace as(`graphfmt')
 
 	
 			
@@ -1845,13 +2036,13 @@ qui {
 					local notes_sigdef 			- `notes_sigdef_N' of the outcomes with estimates that are stat. insig. in rep. analyses only because more stringent stat. sig. level is appplied in rep. analysis than in original analysis  
 				}
 				if `signum_oa'<`signum_ra' { 
-					local notes_sigdef 			- part of the outcomes with estimates that are stat. sig. in rep. analyses may only be so because less stringent stat. sig. level is appplied in rep. analysis than in original analysis  
+					local notes_sigdef 			- `notes_sigdef_N' of the outcomes with estimates that are stat. sig. in rep. analyses may only be so because less stringent stat. sig. level is appplied in rep. analysis than in original analysis  
 				}
 			}
 			else {
 				local notes_shares_shown 	mean shares of analysis paths across studies
 				if `notes_sigdef_N'>0 {
-					local notes_sigdef 			- `notes_sigdef_N' of the studies with estimates that are stat. insig. in rep. analyses only because more stringent stat. sig. level is appplied in rep. analysis than in original analysis  
+					local notes_sigdef 			- `notes_sigdef_N' of the studies with estimates that are stat. insig. (sig) in rep. analyses only because more (less) stringent classification of what constitutes stat. significance is appplied in rep. analysis than in original analysis  
 				}
 			}
 		}	
@@ -1862,22 +2053,38 @@ qui {
 
 
 *** Display figure note
-		noi dis _newline(1)	"Sensitivity Dasboard stored under `filepath'/repframe_sensdash_`ind_level'_`fileidentifier'.`graphfmt'"
+		noi dis _newline(1)	"Robustness Dasboard stored under `filepath'/repframe_dashboard_`ind_level'_`fileidentifier'.`graphfmt'"
 		noi dis _newline(1)	"Dashboard shows `notes_shares_shown' - `notes_spec' `notes_sigdef'"
+		noi dis _newline(2) "Legend:"
 		noi dis _newline(1)	"`=ustrunescape("\u03B2")' = beta coefficient"
 		noi dis				"`=ustrunescape("\u03B2\u0303")' = median beta coefficient of reproducability or replicability analysis, measured as % deviation from original beta coefficient; generally, tildes indicate median values"
 		noi dis 			"CI = confidence interval"
 		noi dis             "{it:p} = {it:p}-value (default relies on two-sided test assuming an approximately normal distribution)" 
-		noi dis				"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original study {it:o}" 
+		if `studypooling'==0 {
+			noi dis				"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original study {it:o}" 
+		}
+		else {
+			noi dis				"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original studies {it:o}" 
+		}
 		if `notes_sigdef_N'>0 { 
 			noi dis 			"`=ustrunescape("\u03B1")' = significance level"
 		}
-		noi dis 			"`=ustrunescape("\u0394\u0305")' = mean absolute deviation"
+		noi dis 			"{it:X}`=ustrunescape("\u0305")' = mean of parameter {it:X}"
+		noi dis 			"`=ustrunescape("\u0394")' = absolute deviation"
 		if `aggregation'==0 {
 			if beta_rel_orig_j!=. {
 				noi dis 		"[+/-xx%] = Percentage in squared brackets refers to the original beta coefficient, expressed as % deviation from original mean of the outcome"
 			}
-		}    
+		} 
+		else {
+			noi dis 			"|{it:X}| = absolute value of parameter {it:X}"
+			if `sigdigits_ra'==`sigdigits_oa' {
+				noi dis 	"`=ustrunescape("\u039A")' = significance agreement"  
+			}
+			if `sigdigits_ra'!=`sigdigits_oa' {
+				noi dis 	"`=ustrunescape("\u039A")' = significance classification agreement"  
+			}
+		}   
 		if "`extended'"!="none" {
 			noi dis 	   		   "low |`=ustrunescape("\u03B2")'| (high se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently low (high) to turn the overall estimate insignificant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"
 			noi dis    "Conversely, high |`=ustrunescape("\u03B2")'| (low se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently high (low) to turn the overall estimate significant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"   

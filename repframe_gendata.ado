@@ -12,7 +12,7 @@
 	second US National health and Nutrition Examination Survey (NHANES II), 1976-1980, made available by
 	A.C.Cameron & P.K.Trivedi (2022): Microeconometrics Using Stata, 2e, under http://www.stata-press.com/data/mus2/mus206nhanes.dta.
 	The specific choices for the different analytical decisions made below do not all represent justifiable decisions for a multiverse analysis
-	but partly have the purpose of retrieving a Sensitivity Dashboard that shows three outcomes with varying indicator outputs while presenting
+	but partly have the purpose of retrieving a Robustness Dashboard that shows three outcomes with varying indicator outputs while presenting
 	different ways to include certain analytical decisions into to Stata loop for estimation.    
 
 	repframe_gendata requires version 14.0 of Stata or newer.
@@ -163,11 +163,11 @@ program define repframe_gendata
 			clear
 			
 			*** input appended study-level indicator data as matrix
-			matrix RFx = (6, 2, 5, 10, 2, .0082176356, .27517629, .68582135, .40483445, 370.49109, 1.4022906, 0, ., ., ., ., ., ., 2, 27.517628, .48344016, 3.3854551, 47.685406, .41954255, 31.95549, 65.533859, 55.159859, 0, ., ., ., ., ., ., ., 0, 3900, 7200\2, 5, 5, 10, 4, .022648577, .057499997, .22945449, .23103143, .63143605, .62807679, 1, .11389022, .38999999, ., ., 23.943708, .82998937, 3, 6.5, 1, -33.51984, 13.913999, .4823457, 11.589976, 97.550743, 2.5257518, 2, 32.25, 11.5, 0, .18320209, .069054969, 48.360657, 54.918034, 0, 200, 200\3, 4, 5, 10, 4, .00098652905, .26625001, .3186768, .45327455, .5366891, .60016006, 0, ., ., ., ., ., ., 4, 26.625, 0, -52.310844, 9.5202055, .2619305, 15.499557, 98.052307, 1.4927974, 0, ., ., ., ., ., ., ., 0, 200, 200\4, 2, 5, 10, 0, ., ., ., ., ., ., 2, .71760833, .4425, ., ., .90148735, .80527323, 0, ., ., ., ., ., ., ., ., 2, 49, ., 6.75, .47869346, .70261729, 100, 0, 0, 200, 200\5, 3, 5, 10, 3, .006592033, .0099999998, .035533853, .041855894, .69525707, .63315201, 0, ., ., ., ., ., ., 3, 1, 2, -29.474079, 10.946845, .43154976, 19.751516, 95.53067, 6.4313078, 0, ., ., ., ., ., ., ., 0, 200, 200\7, 3, 5, 10, 1, .032177683, 0, -.090766363, -.090731561, .51920128, .47109264, 2, .24948081, .73500001, ., ., 206.76668, .72556853, 1, 0, 0, ., ., .67627907, 18, 99, 31, 2, 26, ., .5, .28001302, .21931636, 100, 0, 0, 200, 200\1, 4, 5, 5, 4, .011543697, .86842108, .97206974, .9531936, .38703936, .31969121, 0, ., ., ., ., ., ., 4, 86.842102, 0, 3.0321226, 6.9325366, .045850128, 100, 90, 0, 0, ., ., ., ., ., ., ., 0, 7, 19)
+			matrix RFx = (6, 2, 5, 10, 2, .0082176, .2751763, .6858214, .4048344, 370.4911, 1.402291, 0, ., ., ., ., ., ., 2, 27.51763, .4834402, ., 3.385455, 47.68541, .4195426, 27.51763, 0, 27.51763, 31.95549, 65.53386, 55.15986, 0, ., ., ., ., ., ., ., ., ., ., 0, 27.51763, 27.51763, 3900, 7200\2, 5, 5, 10, 4, .0226486, .0575, .2294545, .2310314, .631436, .6280768, 1, .1138902, .39, ., ., 23.94371, .8299894, 3, 6.5, 1, ., -33.51984, 13.914, .4823457, 6.5, 0, 6.5, 11.58998, 97.55074, 2.525752, 2, 32.25, 0, 5.75, 1.75, 25.25, 67.75, .1832021, .069055, 48.36066, 54.91803, 0, 31, 14.7, 200, 200\3, 4, 5, 10, 4, .0009865, .26625, .3186768, .4532745, .5366891, .6001601, 0, ., ., ., ., ., ., 4, 26.625, 0, ., -52.31084, 9.520205, .2619305, 26.625, 0, 26.625, 15.49956, 98.05231, 1.492797, 0, ., ., ., ., ., ., ., ., ., ., 0, 26.625, 26.625, 200, 200\4, 2, 5, 10, 0, ., ., ., ., ., ., 2, .7176083, .4425, ., ., .9014874, .8052732, 0, ., ., ., ., ., ., ., ., ., ., ., ., 2, 49, 6.75, ., 0, 44.25, 44.25, .4786935, .7026173, 100, 0, 0, 44.25, 44.25, 200, 200\5, 3, 5, 10, 3, .006592, .01, .0355339, .0418559, .6952571, .633152, 0, ., ., ., ., ., ., 3, 1, 2, ., -29.47408, 10.94685, .4315498, 1, 0, 1, 19.75152, 95.53067, 6.431308, 0, ., ., ., ., ., ., ., ., ., ., 0, 1, 1, 200, 200\7, 3, 5, 10, 1, .0321777, 0, -.0907664, -.0907316, .5192013, .4710926, 2, .2494808, .735, ., ., 206.7667, .7255685, 1, 0, 0, ., ., ., .6762791, 0, 0, 0, 18, 99, 31, 2, 26, .5, ., 0, 73.5, 73.5, 0.280013, 0.2193164, 100, 0, 0, 49, 49, 200, 200\1, 4, 5, 5, 4, .0115437, .8684211, .9720697, .9531936, .3870394, .3196912, 0, ., ., ., ., ., ., 4, 86.8421, 0, ., 3.032123, 6.932537, .0458501, 86.8421, 0, 86.8421, 100, 90, 0, 0, ., ., ., ., ., ., ., ., ., ., 0, 86.8421, 86.8421, 7, 19)
 
 
 			*** define variable names 
-			matrix coln RFx = reflist outcomes_N siglevel_ra_stud siglevel_oa_stud osig_oa_out_N pval_orig_osig_oa_all RF_SIGagr_osig_oa_all RF_ESrel_osig_oa_all RF_SIGrel_osig_oa_all RF_ESvar_osig_oa_all RF_SIGvar_osig_oa_all onsig_oa_out_N pval_orig_onsig_oa_all RF_SIGagr_onsig_oa_all RF_ESrel_onsig_oa_all RF_SIGrel_onsig_oa_all RF_ESvar_onsig_oa_all RF_SIGvar_onsig_oa_all osig_ra_out_N RF2_SIGagr_osig_ra_all RF2_SIGagr_ndir_osig_ra_all RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all RF2_ESagr_osig_ra_all RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all onsig_ra_out_N RF2_SIGagr_onsig_ra_all RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGagr_ndir_onsig_ra_all RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all ivarweight_stud_d analysispaths_min_N analysispaths_max_N
+			matrix coln RFx = reflist outcomes_N siglevel_ra_stud siglevel_oa_stud osig_oa_out_N pval_orig_osig_oa_all RF_SIGagr_osig_oa_all RF_ESrel_osig_oa_all RF_SIGrel_osig_oa_all RF_ESvar_osig_oa_all RF_SIGvar_osig_oa_all onsig_oa_out_N pval_orig_onsig_oa_all RF_SIGagr_onsig_oa_all RF_ESrel_onsig_oa_all RF_SIGrel_onsig_oa_all RF_ESvar_onsig_oa_all RF_SIGvar_onsig_oa_all osig_ra_out_N RF2_SIGagr_osig_ra_all RF2_SIGagr_ndir_osig_ra_all RF2_SIGagr_sigdef_osig_ra_all RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all RF2_SIGcfm_oas_osig_ra_all RF2_SIGcfm_oan_osig_ra_all RF2_SIGcfm_uni_osig_ra_all RF2_ESagr_osig_ra_all RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all onsig_ra_out_N RF2_SIGagr_onsig_ra_all RF2_SIGagr_ndir_onsig_ra_all RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all ivarweight_stud_d RF2_SIGcfm_uni_all RF2_SIGcfm_oa_all analysispaths_min_N analysispaths_max_N
 
 
 			*** convert matrix to dataset
@@ -200,27 +200,36 @@ program define repframe_gendata
 				label var RF_SIGvar_`unit' 	"(RF.5) Significance variation`label_`unit''"
 			}	
 
+			foreach unit in osig_ra_all onsig_ra_all  {
+				label var RF2_SIGagr_`unit' 		"(RF1') Significance agreement`label_`unit''"
+				label var RF2_SIGagr_ndir_`unit' 	"(RF1') Significance agreement (opposite direction)`label_`unit''"
+				label var RF2_SIGvar_nsig_`unit' 	"(RF4') Significance variation for insig. rep. results`label_`unit''"
+				label var RF2_SIGcfm_oas_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, sig. rep. results only)`label_`unit''"
+				label var RF2_SIGcfm_oan_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, insig. rep. results only)`label_`unit''"
+				label var RF2_SIGcfm_uni_`unit'		"(RF6'b*) Sig. agreement (uniform alpha applied)`label_`unit''"
+				foreach cfmtype in oas oan uni {
+					note RF2_SIGcfm_`cfmtype'_`unit': This is an auxiliary indicator required for the correct colouring of circles in Robustness Dashboards that are aggregated across outcomes or studies   
+				}
+			}
 			foreach unit in osig_ra_all {
-				label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
-				label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
-				label var RF2_ESrel_`unit' 			"(RF2.3) Relative effect size`label_`unit''"
-				label var RF2_ESvar_`unit'			"(RF2.4) Effct size variation`label_`unit''"
-				label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance Variation for insig. rep. results`label_`unit''"
-				label var RF2_ESagr_`unit'			"(RF2.6) Effect size agreement`label_`unit''"
-				label var RF2_SIGsw_btonsig_`unit'  "(RF2.7a) Significance switch (beta)`label_`unit''"	
-				label var RF2_SIGsw_setonsig_`unit' "(RF2.7b) Significance switch (se)`label_`unit''"	
+				label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (sig. because of more stringent OA sig. classification)`label_`unit''"
+				label var RF2_ESrel_`unit' 			"(RF2') Relative effect size`label_`unit''"
+				label var RF2_ESvar_`unit'			"(RF3') Effct size variation`label_`unit''"
+				label var RF2_ESagr_`unit'			"(RF7') Effect size agreement`label_`unit''"
+				label var RF2_SIGsw_btonsig_`unit'  "(RF8') Significance switch (beta)`label_`unit''"	
+				label var RF2_SIGsw_setonsig_`unit' "(RF9') Significance switch (se)`label_`unit''"	
 			}
 
 			foreach unit in onsig_ra_all {
-				label var RF2_SIGagr_`unit' 		"(RF2.1) Significance agreement`label_`unit''"
-				label var RF2_SIGagr_sigdef_`unit'	"(RF2.1+) Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
-				label var RF2_SIGagr_ndir_`unit' 	"(RF2.2) Significance agreement`label_`unit''"
-				label var RF2_SIGvar_nsig_`unit' 	"(RF2.5) Significance Variation for insig. rep. results`label_`unit''"
-				label var RF2_SIGvar_sig_`unit' 	"(RF2.5) Significance Variation for sig. rep. results`label_`unit''"
-				label var RF2_SIGsw_btosig_`unit'	"(RF2.7a) Significance switch (beta)`label_`unit''"
-				label var RF2_SIGsw_setosig_`unit'	"(RF2.7b) Significance switch (se)`label_`unit''"
+				label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
+				label var RF2_SIGvar_sig_`unit' 	"(RF4') Significance Variation for sig. rep. results`label_`unit''"
+				label var RF2_SIGsw_btosig_`unit'	"(RF8') Significance switch (beta)`label_`unit''"
+				label var RF2_SIGsw_setosig_`unit'	"(RF9') Significance switch (se)`label_`unit''"
 			}
 
+			label var RF2_SIGcfm_uni_all		"(RF6') Overall sig. agreement (uniform alpha=0.`sigdigits_ra' applied)"
+			label var RF2_SIGcfm_oa_all			"(RF6') Overall sig. classification agreement (OA's alpha applied to orig. results)"
+	
 
 			label var outcomes_N  "Number of outcomes studied"
 			

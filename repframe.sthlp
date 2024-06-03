@@ -73,12 +73,12 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {synopt:{opt se2_orig(varname)}}standard errors of second beta coefficients in analysis paths of robustness tests{p_end}
 {synopt:{opt zscore2_orig(varname)}}{it:t}/{it:z} scores of second beta coefficients in analysis paths of robustness tests{p_end}
 
-{syntab:optional parameters related to Sensitivity Dashboard {help repframe##optional_para_SensDash:[+]}}
-{synopt:{opt sensd:ash(0/1)}}create Sensitivity Dashboard{p_end}
+{syntab:optional parameters related to Robustness Dashboard {help repframe##optional_para_RobDash:[+]}}
+{synopt:{opt dash:board(0/1)}}create Robustness Dashboard{p_end}
 {synopt:{opt vshortref_orig(string)}}very short reference to original study{p_end}
 {synopt:{opt extended(string)}}show indicators from extended set of Reproducibility and Replicability Indicators in the dashboard{p_end}
 {synopt:{opt aggregation(0/1)}}show outcomes in the dashboard aggregated across outcomes instead of individually{p_end}
-{synopt:{opt graphfmt(string)}}file format of Sensitivity Dashboard graph{p_end}
+{synopt:{opt graphfmt(string)}}file format of Robustness Dashboard graph{p_end}
 {synopt:{opt ivF(varname)}}first-stage {it:F}-Statistics, if IV/2SLS estimations{p_end}
 {synopt:{opt signfirst(varname)}}share of first stages with wrong sign{p_end}
 {synoptline}
@@ -94,7 +94,7 @@ of robustness tests - be they reproducibility or replicability analyses - to the
 The command can be applied to calculate indicators across outcomes of a single study or alternatively across studies, the latter requiring the option {cmd:studypooling(1)}.  
 The command produces three outputs: 
 first, a table with the main set of indicators ({it:Reproducibility and Replicability Indicators table}). 
-Second, a so-called {it:Sensitivity Dashboard} that visualizes a second set of indicators.
+Second, a so-called {it:Robustness Dashboard} that visualizes a second set of indicators.
 Third - if the analysis is at the study level -, a dataset with {it:study-level indicator data} that is ready to be re-introduced into the command using the option {cmd:studypooling(1)}.  
 The required data structure and the output data with the different indicators is described in the {help repframe##see_also:online Readme on GitHub}.{p_end}
 
@@ -113,13 +113,13 @@ The required data structure and the output data with the different indicators is
 {phang}
 {opt siglevel(#)} gives the significance level for two-sided tests at study level applied to robustness analyses;
 {cmd:siglevel(5)}, for example, stands for a 5% level;
-{cmd:siglevel(#)} is also the significance level applied to original results with indicators presented in the {it:Sensitivity Dashboard}.
+{cmd:siglevel(#)} is also the significance level applied to original results with indicators presented in the {it:Robustness Dashboard}.
 
 {phang}
 {opt siglevel_orig(#)} gives the maximum level of statistical significance labelled as statically significant by original authors, assuming two-sided tests; 
 {cmd:siglevel_orig(5)}, for example, stands for a 5% level applied by original authors;
 the {it:Reproducibility and Replicability Indicators table} classifies original results as statistically significant against this benchmark and
-the {it:Sensitivity Dashboard} shows the related {it:Indicator on non-agreement due to significance definition}.  
+the {it:Robustness Dashboard} shows the related {it:Indicator on non-agreement due to significance definition}.  
 
 {phang}
 {opt shortref(string)} provides a short reference in string format for the study, such as "[first author] et al. (year)".
@@ -262,16 +262,16 @@ for the respective outcome, if such a second original estimate exists; if {cmd:z
 it is calculated based on {cmd:beta2_orig()} and {cmd:se2_orig()} or {cmd:beta2_orig()} and {cmd:pval2_orig()}.
 
 
-{marker optional_para_SensDash}{...}
-{dlgtab:optional parameters related to Sensitivity Dashboard}
+{marker optional_para_RobDash}{...}
+{dlgtab:optional parameters related to Robustness Dashboard}
 
 {phang}
-{opt sensd:ash(0/1)} is a binary indicator on whether to create the Sensitivity Dashboard (yes=1, no=0);
-default is {cmd:sensdash(1)}.
+{opt dash:board(0/1)} is a binary indicator on whether to create the Robustness Dashboard (yes=1, no=0);
+default is {cmd:dashboard(1)}.
 
 {phang}
 {opt vshortref_orig(string)} provides a very short reference to the original study, for example "[first letters of original authors] (year)";
-default is {cmd vshortref_orig("original estimate")}. This reference is included in the Sensitivity Dashboard.
+default is {cmd vshortref_orig("original estimate")}. This reference is included in the Robustness Dashboard.
 
 {phang}
 {opt extended(string)} provides the type of indicator from the extended set of Reproducibility and Replicability Indicators that is to be shown in the dashboard;
@@ -283,7 +283,7 @@ or "both" (both indicators); default is {cmd:extended("none")}.
 default at study level is {cmd:aggregation(0)}; if pooled across studies, {cmd:aggregation()} is always set to 1.
 
 {phang}
-{opt graphfmt(string)} provides the file format under which the Sensitivity Dashboard is stored; default is {cmd:graphfmt(emf)} for Windows
+{opt graphfmt(string)} provides the file format under which the Robustness Dashboard is stored; default is {cmd:graphfmt(emf)} for Windows
 and {cmd:graphfmt(tif)} otherwise; {help graph export:other possible formats} include {it:ps},  {it:eps},  {it:pdf}, and  {it:png}.
 
 {phang}
@@ -307,7 +307,7 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {p 8 12}({stata "repframe_gendata, studypooling(0)":{it:click to generate multiverse dataset at study level}}){p_end}
 
 {phang}	
-{bf:Reproducibility and Replicability Indicators table and Sensitivity Dashboard #1}
+{bf:Reproducibility and Replicability Indicators table and Robustness Dashboard #1}
 
 {p 8 12}. {stata "repframe outcome, beta(b) beta_orig(b_og) pval(p) pval_orig(p_og) se(se) se_orig(se_og) siglevel(5) siglevel_orig(10) shortref(repframe_ex)"}{p_end}
 
@@ -346,7 +346,7 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {p 8 12}({stata "repframe_gendata, studypooling(1)":{it:click to generate illustrative study-level indicator data}}){p_end}
 
 {phang}	
-{bf:Reproducibility and Replicability Indicators table and Sensitivity Dashboard #2 (across studies)}
+{bf:Reproducibility and Replicability Indicators table and Robustness Dashboard #2 (across studies)}
 
 {p 8 12}. {stata "repframe reflist, studypooling(1)"}
 
@@ -360,7 +360,7 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {title:References}
 
 {p 4 8 2}
-Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}.{p_end}
+Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}, 240(2), 105398.{p_end}
 {p 4 8 2}
 Dreber, A. & Johanneson, M. (2023). A Framework for Evaluating Reproducibility and Replicability in Economics. Available at SSRN: {browse "https://ssrn.com/abstract=4458153"} or {browse "http://dx.doi.org/10.2139/ssrn.4458153"}.{p_end}
 
