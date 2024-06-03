@@ -15,7 +15,7 @@ for the syntax and the whole range of options.
 
 As shown in the figure below and described in the following, the `repframe` command can be applied both to derive indicators at the level of individual studies and to pool these indicators across studies. At both levels, the command produces two outputs, a table with the main set of indicators (*Reproducibility and Replicability Indicators table*) as .csv or xlsx file and a so-called *Robustness Dashboard* that visualizes a second set of indicators. At the study level, the command additionally produces a Stata .dta file as a third output. This *study-level indicator data* is ready to be re-introduced into the command to calculate the indicators across studies.  
 
-<img width="800" alt="repframe outputs" src="https://github.com/guntherbensch/repframe/assets/128997073/bd1c5852-355b-427d-9c4e-963aa7d39333"> &nbsp;
+<img width="800" alt="repframe outputs" src="https://github.com/guntherbensch/repframe/assets/128997073/5f944ffa-61cf-45df-9294-82b8fd8e01b0"> &nbsp;
 
 
 
@@ -262,14 +262,15 @@ $$ I´_{9j} = mean(\mathbb{I}(se_i  < se(tosig)_j)) \times 100   		\quad  \text{
 
 The following shows an example of the *Robustness Dashboard*, indicating where the indicators outlined above can be found in the figure. Indicators from the extended set are in lighter blue. The vertical axis of the dashboard shows individual outcomes, grouped into statistically significant and insignificant if aggregated. Note that this grouping may differ from the one in the *Reproducibility and Replicability Indicators table*, because that table applies to original results the significance level defined by original authors, whereas the dashboard applies the same significance level as adopted in the robustness analysis. The horizontal axis distinguishes between statistically significant and insignificant robustness results, additionally differentiating between statistically significant results in the same and in opposite direction. Circle sizes illustrate $I´_{1j}$, the *significance agreement indicator*. They are coloured in either darker blue for confirmatory results or in lighter blue for non-confirmatory results. As can be seen with Outcome 3 in the figure, this colouring also discriminates $I´_{1j}$ from $I´_{5j}$, the *indicator on non-agreement due to significance classification*.
 
+When aggregating across outcomes or studies, the bottom of the dasboard additionally includes a histogram with the share of confirmatory results and absolute values of effect sizes. 
+
 In the results window of Stata, the `repframe` command provides as additional information the (minimum and maximum) number specifications that have been used to derive the dashboard indicators.   
 
-<img width="700" alt="repframe Robustness Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/ce6763f0-ba69-439c-a346-4e7adcb3b5dd"> &nbsp;
+<img width="700" alt="repframe Robustness Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/7d9b6e0e-3e51-4205-b995-b9458ee6e9ab"> &nbsp;
 
 &nbsp;
 
-<img width="700" alt="repframe Robustness Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/b8616f2e-a187-4e38-8144-480998388b40"> &nbsp;
-&nbsp;
+<img width="700" alt="repframe Robustness Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/3b51f59a-274f-422b-8068-5fc03af26424"> &nbsp;
 
 
 
