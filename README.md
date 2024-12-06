@@ -17,8 +17,7 @@ The `repframe` command can be applied to derive indicators at both the individua
 
 As additional output, the `repframe` command transforms analysis-path input data to a (1) *Harmonized analysis path dataset* and saves study-level indicator information in (2) *Study-level indicator data*, which is ready to be reintroduced into the command to calculate the indicators across studies. All input and output data is in Stata .dta format. 
 
-<img width="800" alt="repframe outputs" src="https://github.com/guntherbensch/repframe/assets/128997073/5f944ffa-61cf-45df-9294-82b8fd8e01b0"> &nbsp;
-
+<img width="800" alt="repframe outputs" src="https://github.com/user-attachments/assets/28c5d847-770c-4712-89e8-9f4acb135bf0"> &nbsp;
 
 
 ## Defaults applied by the repframe command
@@ -39,12 +38,21 @@ The `repframe` command applies a few default assumptions. Use the following opti
 
 ### Data structure for analyses at study level
 
-The input data at study level needs to be in a specific format for `repframe` to calculate the indicators and dashboards. Each observation should represent one analysis path, which is the combination of analytical decisions in the multiverse robustness analysis. 
-In the toy example with one main result (here: one main outcome) represented in the figure below, two alternative choices are assessed for one analytical decision (**analytical_decision_1**, e.g. a certain adjustment of the outcome variable) and three alternative choices are assessed for two other analytical decisions (**analytical_decision_2** and **analytical_decision_3**, e.g. the set of covariates and the sample used). This gives a multiverse of 3^2*2^1 = 18 analysis paths if all combinations are to be considered. The number of observations is therefore 18 in this example.
+The input data at study level needs to be in a specific format for `repframe` to calculate the indicators and dashboards. Each observation should represent one analysis path, which is the combination of analytical decisions in the multiverse robustness analysis. In the snippet shown in the figure below, we see one main result (here: under the variable *outcome*), for which four analytical decisions are varied (here: *cov1* to *if_cond*, including a certain covariate set, for example).
 
-For each observation, the minimum requirement is that the variable **mainvar** (this is the result at the study level) is defined together with the coefficient information retrieved via the option `beta(varname)` and information to determine statistical significance. The variable **mainvar** should be numeric with value labels. It is recommended to specify both the information on *p*-values and on standard errors, as outlined above in the sub-section on defaults applied by the `repframe` command. As noted in that same sub-section, the dataset should also include, for each result, the same information on the original analysis as one analysis path. It is further recommended to include variables reflecting the *analytical decisions* via the option `decisions()`. Here, each decision variable should be labelled, numeric with the decision adopted by the original authors always being zero, and with labelled values. The `repframe` command gives error messages if these requirements are not met.
+The minimum requirement is that the result variable is defined together with the coefficient information (here: *b*) and information to determine statistical significance (here *se* and *p*). The result variable should be numeric with value labels. It is recommended to specify both the information on *p*-values and on standard errors, as outlined above in the sub-section on defaults applied by the `repframe` command. As noted in that same sub-section, the dataset should also include, for each result, the same information on the specification from the original analysis as one analysis path. 
 
-<img width="800" alt="toy example of repframe multiverse input data structure" src="https://github.com/guntherbensch/repframe/assets/128997073/81821432-de86-4bea-b0a8-66f8515c2508"> &nbsp;
+<img width="1200" alt="toy example of repframe multiverse input data structure" src="https://github.com/user-attachments/assets/2999922e-4943-4da0-b4a9-7173b02ed479"> &nbsp;
+
+Together with information on the level of statistical significance in the robustness and original analysis, respectively, the minimum command input looks as follows for our example:
+```stata
+repframe outcome, beta(b) se(se) pval(p) origpath(origpath) siglevel(5) siglevel_orig(10)
+```
+
+The variable *orig_include* in the example tells us that the original specification is supposed to be included in the mutiverse robustness analysis. Since the `repframe` command by default assumes *not* to include this specification, we should aditoinally specify the option `orig_in_multiverse()`. In addition, by including the variables that reflect the analytical decisions via the `decisions()` option, `repframe` can produce a set of complementary plots that allow further examination of the robustness of the results. Here, each decision variable should be labelled, numeric with the decision adopted by the original authors always being zero, and with labelled values. The `repframe` command gives error messages if these requirements are not met.
+```stata
+repframe outcome, beta(b) se(se) pval(p) origpath(origpath) siglevel(5) siglevel_orig(10) orig_in_multiverse(orig_include) decisions(cov1 cov2 cov3 ifcond)
+```
 
 The Stata help file contains a simple example that uses the command [`repframe_gendata`](https://github.com/guntherbensch/repframe/blob/main/repframe_gendata.ado) to build such a data structure. 
 
@@ -276,12 +284,10 @@ When aggregating across results or studies, the bottom of the dashboard addition
 
 In the results window of Stata, the `repframe` command provides additional information on the (minimum and maximum) number of specifications that have been used to derive the dashboard indicators.   
 
-<img width="700" alt="repframe Robustness Dashboard example" src="https://github.com/guntherbensch/repframe/assets/128997073/7d9b6e0e-3e51-4205-b995-b9458ee6e9ab"> &nbsp;
-
+<img width="700" alt="repframe Robustness Dashboard example" src="https://github.com/user-attachments/assets/7dafd122-ac5c-4aef-b092-e84484294215"> &nbsp;
 &nbsp;
 
-<img width="700" alt="repframe Robustness Dashboard example, aggregated" src="https://github.com/guntherbensch/repframe/assets/128997073/3b51f59a-274f-422b-8068-5fc03af26424"> &nbsp;
-
+<img width="700" alt="repframe Robustness Dashboard example, aggregated" src="https://github.com/user-attachments/assets/a3466d49-37a5-4485-bf4f-74299960c25e"> &nbsp;
 
 
 ### Summary
