@@ -1,6 +1,6 @@
 /*
 *** PURPOSE:	
-	This Stata command exemplifies how to run multiple specifications for a multiverse analysis and store the estimates as a dataset 
+	This Stata .ado file exemplifies how to run multiple specifications for a multiverse analysis and store the estimates as a dataset 
 	including information on
 		- the outcome
 		- the beta coefficient of the multiple analysis paths
@@ -8,12 +8,18 @@
 		- the various decision choices taken (beyond the outcome, if applicable), for example on the set of covariates
 		- additional parameters, such as the number of observation and the outcome mean
 
-	The command is applied in the help file of the command -repframe-, where it is applied to data from the
+	The command -repframe_gendata- is applied in the help file of the command -repframe-, where it is applied to data from the
 	second US National health and Nutrition Examination Survey (NHANES II), 1976-1980, made available by
 	A.C.Cameron & P.K.Trivedi (2022): Microeconometrics Using Stata, 2e, under http://www.stata-press.com/data/mus2/mus206nhanes.dta.
 	The specific choices for the different analytical decisions made below do not all represent justifiable decisions for a multiverse analysis
 	but partly have the purpose of retrieving a Robustness Dashboard that shows three outcomes with varying indicator outputs while presenting
-	different ways to include certain analytical decisions into to Stata loop for estimation.    
+	different ways to include certain analytical decisions into to Stata loop for estimation.
+
+	The bottom part of this command after -if `studypooling'==1 { ... }- refers to the case where robustness analysis indicators are aggregated 
+	across multiple robustness reproducibility studies. What you see in this part of the .ado file is fake data, which was created to provide an
+	example of indicator calculation and dashboard visualization even if one does not have the repframe output of multiple studies at hand.
+	To understand the logic of this part, it may also help to go to "Examples" in the help file of the repframe command (-help repframe-), where
+	the last examples show data preparation for analyses across studies.
 
 	repframe_gendata requires version 14.0 of Stata or newer.
 					
@@ -55,14 +61,14 @@ program define repframe_gendata
 			keep if region==1 | region==2 
 
 			** choose outcomes 
-			rename highlead lead_vs1    
-			*rename lead     lead_vs2 // not used as these alternative outcomes are in different units
-			*rename loglead  lead_vs3
-			*rename highbp   bp_vs1
-			*rename bpdiast  bp_vs2
-			*rename bpsystol bp_vs3
-			rename vitaminc vitaminc_vs1
-			gen hlthstat_vs1 = (hlthstat==1 | hlthstat==2)
+			rename highlead lead_vs0    
+			*rename lead     lead_vs1 // not used as these alternative outcomes are in different units
+			*rename loglead  lead_vs2
+			*rename highbp   bp_vs0
+			*rename bpdiast  bp_vs1
+			*rename bpsystol bp_vs2
+			rename vitaminc vitaminc_vs0
+			gen hlthstat_vs0 = (hlthstat==1 | hlthstat==2)
 
 			rename finalwgt weight_hlthstat
 			rename leadwt   weight_lead
@@ -71,11 +77,11 @@ program define repframe_gendata
 
 			** run estimations and retrieve estimates
 			foreach outcome in hlthstat lead vitaminc {
-				local lastvs 1
+				local lastvs 0
 				if "`outcome'"=="vitaminc" {
-					local lastvs 1
+					local lastvs 0
 				}
-				forval outcome_vs = 1(1)`lastvs' {
+				forval outcome_vs = 0(1)`lastvs' {
 					foreach cov1 in "" "age black orace" {
 						foreach cov2 in "" "height" {
 							foreach cov3 in "" "i.hsizgp" {
@@ -132,33 +138,36 @@ program define repframe_gendata
 			order p, after(se)
 			
 			label define outcome    1 "excellent or very good health status" 2 "blood lead level" 3 "Vitamic C"
-			label val outcome outcome   	
-			
+			label define cov1 		0 "key dem. cov. not included"      1 "key dem. cov. included"
+			label define cov2 		0 "add. ind. cov. not included"     1 "add. ind. cov. included"
+			label define cov3 		0 "add. househ. cov. not included"  1 "add. househ. cov. included"
+			label define cov4 		0 "add. locality cov. not included" 1 "add. locality cov. included"
+			label define ifcond 0 "regional subsample" 1 "entire sample" 2 "subgroup from regional subsample"
+			foreach lvar in outcome cov1 cov2 cov3 cov4 ifcond {
+				label val `lvar' `lvar'   	
+			}
+			label var cov1 "Key demographics covariate set"
+			label var cov2 "Additional individual covariate"
+			label var cov3 "Additional household covariate"
+			label var cov4 "Additional locality covariate"
+			label var ifcond "Sample"
+
 			egen nmiss=rmiss(*)
 			drop if nmiss==`n_max'	
 			drop nmiss
 
-			*** define original estimate
-				// here (random choice): - outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 -
-			foreach var in beta se pval outcome_mean df {
-				bysort outcome:  gen `var'_wgt_orig_x = `var'_wgt if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0
-				bysort outcome: egen `var'_wgt_orig   = mean(`var'_wgt_orig_x)
-			}
-			drop if outcome_vs==1 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==0 // original estimate is not supposed to be part of the multiverse
-			drop *_x
+			*** define (i) original estimate (all choices at zero), (ii) whether the original estimate is to be included in the multiverse analysis, and (iii) the preferred analysis path of the robustness test
+			gen origpath = (outcome_vs==0 & cov1==0 & cov2==0 & cov3==0 & cov4==0 & ifcond==0)
+			gen orig_include = 1
+			gen prefpath = (outcome_vs==0 & cov1==1 & cov2==0 & cov3==1 & cov4==1 & ifcond==1)
 
 			*** shorten varnames as the {stata ""} option in the stata help file only allows for a certain number of characters 
 			rename outcome_mean_wgt			out_mn
-			rename outcome_mean_wgt_orig	out_mn_og 
 			rename beta_wgt					b
-			rename beta_wgt_orig			b_og
 			rename se_wgt  					se
-			rename se_wgt_orig				se_og  
 			rename pval_wgt					p
-			rename pval_wgt_orig			p_og
 			rename df_wgt					df
-			rename df_wgt_orig				df_og
-		}
+			}
 		if `studypooling'==1 {
 			clear
 			
@@ -167,7 +176,7 @@ program define repframe_gendata
 
 
 			*** define variable names 
-			matrix coln RFx = reflist outcomes_N siglevel_ra_stud siglevel_oa_stud osig_oa_out_N pval_orig_osig_oa_all RF_SIGagr_osig_oa_all RF_ESrel_osig_oa_all RF_SIGrel_osig_oa_all RF_ESvar_osig_oa_all RF_SIGvar_osig_oa_all onsig_oa_out_N pval_orig_onsig_oa_all RF_SIGagr_onsig_oa_all RF_ESrel_onsig_oa_all RF_SIGrel_onsig_oa_all RF_ESvar_onsig_oa_all RF_SIGvar_onsig_oa_all osig_ra_out_N RF2_SIGagr_osig_ra_all RF2_SIGagr_ndir_osig_ra_all RF2_SIGagr_sigdef_osig_ra_all RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all RF2_SIGcfm_oas_osig_ra_all RF2_SIGcfm_oan_osig_ra_all RF2_SIGcfm_uni_osig_ra_all RF2_ESagr_osig_ra_all RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all onsig_ra_out_N RF2_SIGagr_onsig_ra_all RF2_SIGagr_ndir_onsig_ra_all RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all ivarweight_stud_d RF2_SIGcfm_uni_all RF2_SIGcfm_oa_all analysispaths_min_N analysispaths_max_N
+			matrix coln RFx = reflist results_N siglevel_ra_stud siglevel_oa_stud osig_oa_rslt_N pval_orig_osig_oa_all RF_SIGagr_osig_oa_all RF_ESrel_osig_oa_all RF_SIGrel_osig_oa_all RF_ESvar_osig_oa_all RF_SIGvar_osig_oa_all onsig_oa_rslt_N pval_orig_onsig_oa_all RF_SIGagr_onsig_oa_all RF_ESrel_onsig_oa_all RF_SIGrel_onsig_oa_all RF_ESvar_onsig_oa_all RF_SIGvar_onsig_oa_all osig_ra_rslt_N RF2_SIGagr_osig_ra_all RF2_SIGagr_ndir_osig_ra_all RF2_SIGagr_sigdef_osig_ra_all RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all RF2_SIGcfm_oas_osig_ra_all RF2_SIGcfm_oan_osig_ra_all RF2_SIGcfm_uni_osig_ra_all RF2_ESagr_osig_ra_all RF2_SIGsw_btonsig_osig_ra_all RF2_SIGsw_setonsig_osig_ra_all onsig_ra_rslt_N RF2_SIGagr_onsig_ra_all RF2_SIGagr_ndir_onsig_ra_all RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all RF2_SIGsw_btosig_onsig_ra_all RF2_SIGsw_setosig_onsig_ra_all ivarweight_stud_d RF2_SIGcfm_uni_all RF2_SIGcfm_oa_all analysispaths_min_N analysispaths_max_N
 
 
 			*** convert matrix to dataset
@@ -204,46 +213,46 @@ program define repframe_gendata
 				label var RF2_SIGagr_`unit' 		"(RF1') Significance agreement`label_`unit''"
 				label var RF2_SIGagr_ndir_`unit' 	"(RF1') Significance agreement (opposite direction)`label_`unit''"
 				label var RF2_SIGvar_nsig_`unit' 	"(RF4') Significance variation for insig. rep. results`label_`unit''"
-				label var RF2_SIGcfm_oas_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, sig. rep. results only)`label_`unit''"
-				label var RF2_SIGcfm_oan_`unit'		"(RF6'b*) Sig. classification agreement (OA's alpha applied to orig. results, insig. rep. results only)`label_`unit''"
-				label var RF2_SIGcfm_uni_`unit'		"(RF6'b*) Sig. agreement (uniform alpha applied)`label_`unit''"
+				label var RF2_SIGcfm_oas_`unit'		"(RF7'b*) Sig. classification agreement (OA's alpha applied to orig. results, sig. rep. results only)`label_`unit''"
+				label var RF2_SIGcfm_oan_`unit'		"(RF7'b*) Sig. classification agreement (OA's alpha applied to orig. results, insig. rep. results only)`label_`unit''"
+				label var RF2_SIGcfm_uni_`unit'		"(RF7'b*) Sig. agreement (uniform alpha applied)`label_`unit''"
 				foreach cfmtype in oas oan uni {
-					note RF2_SIGcfm_`cfmtype'_`unit': This is an auxiliary indicator required for the correct colouring of circles in Robustness Dashboards that are aggregated across outcomes or studies   
+					note RF2_SIGcfm_`cfmtype'_`unit': This is an auxiliary indicator required for the correct colouring of circles in Robustness Dashboards that are aggregated across results or studies   
 				}
 			}
 			foreach unit in osig_ra_all {
-				label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (sig. because of more stringent OA sig. classification)`label_`unit''"
+				label var RF2_SIGagr_sigdef_`unit'	"(RF6') Significance agreement (sig. because of more stringent OA sig. classification)`label_`unit''"
 				label var RF2_ESrel_`unit' 			"(RF2') Relative effect size`label_`unit''"
 				label var RF2_ESvar_`unit'			"(RF3') Effct size variation`label_`unit''"
-				label var RF2_ESagr_`unit'			"(RF7') Effect size agreement`label_`unit''"
+				label var RF2_ESagr_`unit'			"(RF5') Effect size agreement`label_`unit''"
 				label var RF2_SIGsw_btonsig_`unit'  "(RF8') Significance switch (beta)`label_`unit''"	
 				label var RF2_SIGsw_setonsig_`unit' "(RF9') Significance switch (se)`label_`unit''"	
 			}
 
 			foreach unit in onsig_ra_all {
-				label var RF2_SIGagr_sigdef_`unit'	"(RF5') Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
+				label var RF2_SIGagr_sigdef_`unit'	"(RF6') Significance agreement (insig. because of less stringent OA sig. definition)`label_`unit''"
 				label var RF2_SIGvar_sig_`unit' 	"(RF4') Significance Variation for sig. rep. results`label_`unit''"
 				label var RF2_SIGsw_btosig_`unit'	"(RF8') Significance switch (beta)`label_`unit''"
 				label var RF2_SIGsw_setosig_`unit'	"(RF9') Significance switch (se)`label_`unit''"
 			}
 
-			label var RF2_SIGcfm_uni_all		"(RF6') Overall sig. agreement (uniform alpha=0.`sigdigits_ra' applied)"
-			label var RF2_SIGcfm_oa_all			"(RF6') Overall sig. classification agreement (OA's alpha applied to orig. results)"
+			label var RF2_SIGcfm_uni_all		"(RF7') Overall sig. agreement (uniform alpha=0.`sigdigits_ra' applied)"
+			label var RF2_SIGcfm_oa_all			"(RF7') Overall sig. classification agreement (OA's alpha applied to orig. results)"
 	
 
-			label var outcomes_N  "Number of outcomes studied"
+			label var results_N  "Number of results studied"
 			
 			foreach set in oa ra {
-				label var osig_`set'_out_N   "Number of outcomes in original study with stat. significant estimate according to sig. level of `set' analysis"
-				label var onsig_`set'_out_N  "Number of outcomes in original study with stat. insignificant estimate according to sig. level of `set' analysis"
+				label var osig_`set'_rslt_N   "Number of results in original study with stat. significant estimate according to sig. level of `set' analysis"
+				label var onsig_`set'_rslt_N  "Number of results in original study with stat. insignificant estimate according to sig. level of `set' analysis"
 			}
 			
 			label var siglevel_oa_stud  "Significance level of two-sided test applied to original study / by original author(s)"
 			label var siglevel_ra_stud  "Significance level of two-sided test applied in reproducability or replicability analyses of study"
 			
-			label var ivarweight_stud_d "Outcomes in study weighted by the inverse variance"
-			label var analysispaths_min_N  "Minimum number of analysis paths studied (across outcomes)"
-			label var analysispaths_max_N  "Maximum number of analysis paths studied (across outcomes)"
+			label var ivarweight_stud_d "Results in study weighted by the inverse variance"
+			label var analysispaths_min_N  "Minimum number of analysis paths studied (across results)"
+			label var analysispaths_max_N  "Maximum number of analysis paths studied (across results)"
 		}
 	}
 end
