@@ -36,7 +36,7 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {synoptline}
 {syntab:parameters required for study-level analyses {help repframe##options:[+]}}
 {synopt:{opt beta(varname)}}beta coefficients in analysis paths of robustness tests, incl. original beta coefficient{p_end}
-{synopt:{opt siglevel(#)}}significance level{p_end}
+{synopt:{opt siglevel(#)}}significance level applied to robustness tests{p_end}
 {synopt:{opt siglevel_orig(#)}}maximum significance level labelled as statically significant by original authors{p_end}
 {synopt:{opt origpath(varname)}}specifier of analysis paths from original study{p_end}
 {synopt:{opt shortref(string)}}short study reference{p_end}
@@ -69,10 +69,11 @@ where {cmd:mainvar} is the name of the labelled variable that specifies either{p
 {syntab:optional parameters related to Robustness Dashboard {help repframe##optional_para_RobDash:[+]}}
 {synopt:{opt dash:board(0/1)}}create Robustness Dashboard{p_end}
 {synopt:{opt vshortref_orig(string)}}very short reference to original study{p_end}
-{synopt:{opt extended(string)}}show indicators from extended set of Reproducibility and Replicability Indicators in the dashboard{p_end}
+{synopt:{opt customindicators(string)}}show custom set of Reproducibility and Replicability Indicators in the dashboard{p_end}
 {synopt:{opt aggregation(0/1)}}show results in the dashboard aggregated across results instead of individually{p_end}
 {synopt:{opt graphfmt(string)}}file format of Robustness Dashboard graph{p_end}
-{synopt:{opt ivF(varname)}}first-stage {it:F}-Statistics, if IV/2SLS estimations{p_end}
+{synopt:{opt tFinput(string varname)}}set of input parameters for {it:t}F adjustments, if IV/2SLS estimations{p_end}
+{synopt:{opt pval_ar(varname)}}Anderson-Rubin {it:p}-values on statistical significance of estimates in analysis paths of robustness tests and original study, if IV/2SLS estimations{p_end}
 {synopt:{opt signfirst(varname)}}share of first stages with wrong sign{p_end}
 {synoptline}
 {p2colreset}{...}
@@ -179,7 +180,9 @@ it is assumed to be equal to {cmd:mean()} in the original study. [SLA only]
 {phang}
 {opt sameunits(varname)} specifies the variable {it:varname} that contains for each and every observation a binary indicator
 on whether the original study and analysis paths of robustness tests use same effect size units ({it:varname}==1)
-or not ({it:varname}==0); default is that {it:varname} is assumed to be always equal to one. [SLA only]
+or not ({it:varname}==0); default is that {it:varname} is assumed to be always equal to one. This option is important because some, but not all,
+indicators are calculated differently if the original study and analysis paths of robustness tests use different effect size units
+(see also the {help repframe##see_also:online Readme on GitHub}). [SLA only]
 
 {phang}
 {opt filepath(string)} provides the full file path under which the output files (table, graph, and data) of the {it:repframe} command are stored. 
@@ -223,7 +226,7 @@ but a slightly more formatted version is available for {cmd:tabfmt(xlsx)}.
 
 {phang}
 {opt shelvedind(0/1)} is a binary indicator on whether to also show shelved indicators from among the indicators 
-proposed in a previous version of {help repframe##references:Dreber and Johannesson (2024)} (yes=1, no=0); default is {cmd:shelvedind(0)}. 
+proposed in a previous version of {help repframe##references:Dreber and Johannesson (2025)} (yes=1, no=0); default is {cmd:shelvedind(0)}. 
 
 {phang}
 {opt beta2(varname)} specifies the variable {it:varname} that includes the second beta coefficients in analysis paths of robustness tests and the original study,
@@ -258,11 +261,12 @@ default is {cmd:dashboard(1)}.
 
 {phang}
 {opt vshortref_orig(string)} provides a very short reference to the original study, for example "[first letters of original authors] (year)";
-default is {cmd vshortref_orig("original estimate")}. This reference is included in the Robustness Dashboard. [SLA only]
+default is {cmd:vshortref_orig("original estimate")}. This reference is included in the Robustness Dashboard. [SLA only]
 
 {phang}
-{opt extended(string)} provides the type of indicator from the extended set of Reproducibility and Replicability Indicators that is to be shown in the dashboard;
-{cmd extended()} can be set to "none" (no indicator from the extended set) or "SIGswitch" (Significance switch indicator); default is {cmd:extended("none")}.
+{opt customindicators(string)} provides the custom set of indicators from the Reproducibility and Replicability Indicators that is to be shown in the dashboard;
+the default is {cmd:customindicators("default")}, but {cmd:customindicators()} can be also be set to "SIGagronly" (show only bubbles with the stat. significance
+agreement indicator) or "SIGswitch" (add the Significance switch indicators).
 
 {phang}
 {opt aggregation(0/1)} is a binary indicator on whether to show results in the dashboard individually (=0) or aggregated across results (=1);
@@ -273,8 +277,13 @@ default at study level is {cmd:aggregation(0)}; if pooled across studies, {cmd:a
 and {cmd:graphfmt(tif)} otherwise; {help graph export:other possible formats} include {it:ps},  {it:eps},  {it:pdf}, and  {it:png}.
 
 {phang}
-{opt ivF(varname)} specifies the variable {it:varname} that includes the first-stage {it:F}-Statistics,
-if estimates are based on IV/2SLS estimations.
+{opt tFinput(string varname)} specifies via {it:string} whether the input relates to the "tF" or "VtF" adjustment as proposed by {help repframe##references:Lee et al.}
+- {it:varname} additionally specifies the variable that contains either the first-stage {it:F}-Stat (if {it:tF}) or the {it:VtF} critical value (if {it:VtF}).
+This option is meant to yield weak-IV robust estimates in IV/2SLS estimations.
+        
+{phang}
+{opt pval_ar(varname)} specifies the variable {it:varname} that includes the Anderson-Rubin {it:p}-values on statistical significance of estimates in analysis paths
+of robustness tests and the original study. This option is meant to yield weak-IV robust estimates in IV/2SLS estimations.
 
 {phang}
 {opt signfirst(varname)} specifies the (uniform) variable {it:varname} that includes the share of first stages with wrong sign in a range between 0 and 1,
@@ -295,43 +304,50 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {phang}	
 {bf:#1.1: Reproducibility and Replicability Indicators table and Robustness Dashboard with minimum parameter settings}
 
-{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)"}{p_end}
+{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(10) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)"}{p_end}
 
 {p 8 12}
 [{it:note that this example requires that the output table can be stored in the operating system's standard /Downloads folder. If this does not work, specify the file location with the parameter} {cmd:filepath(string)}.]{p_end}
 
 {phang}	
-{bf:#1.2: Same output as #1.1, now based on information on the degrees of freedom instead of {it:p}-values}
+{bf:#1.2: Variation of #1.1, now applying a more stringent significance level of 5% to robustness tests.}
+
+{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)"}{p_end}
+
+{phang}	
+{bf:#1.3: Same output as #1.2, now based on information on the degrees of freedom instead of {it:p}-values}
 
 {p 8 12}. {stata "repframe outcome, beta(b) df(df) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)"}{p_end}
 
 {phang}	
-{bf:#1.3a: Variation of #1.1 in that Dashboard now includes information on the deviations of the original results from their mean}
+{bf:#1.4a: Variation of #1.2 in that Dashboard now includes information on the deviations of the original results from their mean}
 
 {p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)  mean(out_mn)"}{p_end}
 
 {phang}	
-{bf:#1.3b: Variation of #1.1 in that Dashboard now includes the extended set of indicators}
+{bf:#1.4b: Variation of #1.2 in that Dashboard now includes the Significance Switch Indicators}
 
-{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)  extended(SIGswitch)"}{p_end}
+{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)  customindicators(SIGswitch)"}{p_end}
 
 {phang}	
-{bf:#1.3c: Variation of #1.1 in that Dashboard now shows aggregate study-level indicators across results}
+{bf:#1.4c: Variation of #1.2 in that Dashboard now shows aggregate study-level indicators across results}
 
 {p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex)  aggregation(1)"}{p_end}
 
 {phang}	
-{bf:#1.4: Variation of #1.1 in that the multiverse of robustness analysis paths now includes the original estimate as defined by the parameter {it:orig_in_multiverse()}}
+{bf:#1.5: Variation of #1.2 in that the multiverse of robustness analysis paths now includes the original estimate as defined by the parameter {it:orig_in_multiverse()}}
 
 {p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex) orig_in_multiverse(orig_include)"}{p_end}
 
 {phang}	
-{bf:#1.5: Same output as #1.1, now additionally generating plots on the contribution of individual decisions given that the parameter {it:decisions()} is defined}
+{bf:#1.6a: Same output as #1.2, now additionally generating plots on the contribution of individual decisions given that the parameter {it:decisions()} is defined}
 
 {p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex) decisions(cov1 cov2 cov3 cov4 ifcond)"}{p_end}
 
-{p 8 12} The above line of code produces plots on individual contributions, where all decision choices of the original authors are included and varied.{p_end}
-{p 8 12} #1.5b: The following code generates the same plots when one original choice (here: {it:cov3==0} and {it:ifcond==0}, repsectively) is not included in any robustness test of the multiverse analysis for one of the outcomes (here: {it:outcome==3}).{p_end}
+{p 8 12} This code produces plots on individual contributions, where all decision choices of the original authors are included and varied.{p_end}
+
+{phang}	
+{bf: #1.6b and #1.6c: Variations of #1.6a where one original choice (here: {it:cov3==0} and {it:ifcond==0}, respectively) is not included in any robustness test of the multiverse analysis for one of the outcomes (here: {it:outcome==3})}
 
 {com}{...}
         preserve
@@ -350,12 +366,12 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {txt}{...}
 
 {p 8 12}
-[{it:note that the command {it:repframe} produces notes in Stata's results window to explain the first complementary plot, the so-called {it:Single-Choice Deviation Plot}.}]{p_end}
+[{it:note that the command {it:repframe} produces notes in Stata's results window to explain the three complementary plots generated.}]{p_end}
 
 {phang}	
-{bf:#1.6: Same output as #1, now additionally generating a graph that compares the original specification and the preferred specification of the robustness test given that the parameter {it:prefpath()} is defined}}
+{bf:#1.7: Same output as #1.2, now additionally generating a graph that compares the original specification and the preferred specification of the robustness test given that the parameter {it:prefpath()} is defined}}
 
-{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex) prefpath(prefpath)"}{p_end}
+{p 8 12}. {stata "repframe outcome, beta(b) pval(p) se(se) siglevel(5) siglevel_orig(10) origpath(origpath) shortref(repframe_ex) prefpath(prefpath) mean(out_mn)"}{p_end}
 
 
 
@@ -370,18 +386,22 @@ if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (202
 {p 8 12}. {stata "repframe reflist, studypooling(1)"}
 
 {phang}	
-{bf:#2.2: Same table output as #2.1, Dashboard now with the extended set of indicators}
+{bf:#2.2: Same table output as #2.1, Dashboard now with the Significance Switch Indicators}
 
-{p 8 12}. {stata "repframe reflist, studypooling(1) extended(SIGswitch)"}
+{p 8 12}. {stata "repframe reflist, studypooling(1) customindicators(SIGswitch)"}
 
 
 {marker references}{...}
 {title:References}
 
 {p 4 8 2}
-Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}, 240(2), 105398.{p_end}
+Angrist, J., & Kolesár, M. (2024). One instrument to rule them all: The bias and coverage of just-ID IV. {it:Journal of Econometrics}, {it:240}(2), 105398.{p_end}
 {p 4 8 2}
-Dreber, A. & Johanneson, M. (2024). A Framework for Evaluating Reproducibility and Replicability in Economics. {it:Economic Inquiry}.{p_end}
+Dreber, A. & Johanneson, M. (2025). A Framework for Evaluating Reproducibility and Replicability in Economics. {it:Economic Inquiry}, {it:63}(2), 338-356.{p_end}
+{p 4 8 2}
+Lee, D. S., McCrary, J., Moreira, M. J., & Porter, J. (2022). Valid {it:t}-ratio Inference for IV. {it:American Economic Review}, {it:112}(10), 3260-3290.{p_end}
+{p 4 8 2}
+Lee, D. S., McCrary, J., Moreira, M. J., Porter, J. R., & Yap, L. (2023). What to do when you can't use '1.96' Confidence Intervals for IV. {it:National Bureau of Economic Research Working Paper No. w31893}.{p_end}
 
 
 {marker see_also}{...}

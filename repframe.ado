@@ -1,4 +1,4 @@
-*! version 1.6  06dec2024 Gunther Bensch
+*! version 1.7  16may2025 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
@@ -34,6 +34,8 @@
 	_N    - running number
 	_N	  - total number
 	_orig - original study
+	atF	  - any F-related adjustment, i.e. tF or VtF
+	iva   - weak-IV adjusted 
 	oa    - original analyis OR original author(s)
 	osig  - significant in original study
 	onsig - insignificant in original study
@@ -41,8 +43,10 @@
 	RF    - Reproducibility and replicability Framework indicators
 	rslt  - result level
 	stud  - study level
+	tF	  - Lee at al. (2022, AER) tF adjustment
 	vrd   - varied
 	vrt   - variation
+	VtF   - Lee at al. (2023, WP) VtF adjustment
 	x_    - temporary variables, dropped after sections
 	x2_   - temporary variables, shorter-term, dropped within loops, for example 
 */	
@@ -70,7 +74,7 @@ df(varname numeric)  mean(varname numeric)  sameunits(varname numeric)
 filepath(string) FILEIDentifier(string)  IVARWeight(numlist max=1 integer >=0 <=1)  orig_in_multiverse(varname numeric)  prefpath(varname numeric) 
 tabfmt(string)  shelvedind(numlist max=1 integer >=0 <=1) 
 beta2(varname numeric)  se2(varname numeric)  pval2(varname numeric)  zscore2(varname numeric) 
-DASHboard(numlist max=1 integer >=0 <=1)  vshortref_orig(string)  extended(string) aggregation(numlist max=1 integer >=0 <=1)  graphfmt(string)  ivF(varname numeric) signfirst(varname numeric)
+DASHboard(numlist max=1 integer >=0 <=1)  vshortref_orig(string)  customindicators(string) aggregation(numlist max=1 integer >=0 <=1)  graphfmt(string) tFinput(string asis) pval_ar(varname numeric) signfirst(varname numeric)
 ];
 
 #delimit cr
@@ -79,7 +83,7 @@ DASHboard(numlist max=1 integer >=0 <=1)  vshortref_orig(string)  extended(strin
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.6  06dec2024"
+	local repframe_vs  "version 1.7  16may2025"
 
 *** Preserve initial dataset 
 	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not possible) as different datasets will be used for the table of Indicators and for the Robustness Dashboard
@@ -93,27 +97,41 @@ qui {
 		local studypooling = 0 
 	}
 	
+	if "`tFinput'"!="" & `studypooling'==0 {		
+		// split the tFinput for -keep- command below ...
+		// (1) retrieve the information whether the input relates to the tF or VtF adjustment
+		local ivadjust: word 1 of `tFinput'
+		// (2) retrieve the name of the variable that contains either the first-stage F-Stat (tF) or the VtF critical value (VtF) 
+		local atFvar : word 2 of `tFinput'   	
+
+		if "`atFvar'"=="" {
+			noi dis "{red: Option {opt tFinput()} must specify two parameters: (1) whether the input relates to the tF or VtF adjustment, and (2) the first-stage F-Stat (tF) or the VtF critical value (VtF) (e.g., {opt tFinput(VtF VtF_critval)}).}"
+			use `inputdata', clear
+			exit
+		}
+	}
+
 *** Install user-written packages from SSC, mainly required for the Robustness Dashboard
 	capture which labmask
 	if _rc == 111 {                 
-		noi dis "Installing labutil"
+		noi dis as text "Installing labutil"
 		ssc install labutil, replace
 	}
 	
 	if `dashboard'==1 {
 		capture which colrspace.sthlp 
 		if _rc == 111 {                 
-			noi dis "Installing colrspace"
+			noi dis as text "Installing colrspace"
 			ssc install colrspace, replace
 		}
 		capture which colorpalette
 		if _rc == 111 {                 
-			noi dis "Installing palettes"
+			noi dis as text "Installing palettes"
 			ssc install palettes, replace
 		}
 		capture which schemepack.sthlp
 		if _rc == 111 {                 
-			noi dis "Installing schemepack"
+			noi dis as text "Installing schemepack"
 			ssc install schemepack, replace
 		}
 	}
@@ -121,13 +139,13 @@ qui {
 	if "`decisions'"!="" {	
 		capture which labren
 		if _rc == 111 {                 
-			noi dis "Installing labutil2"
+			noi dis as text "Installing labutil2"
 			ssc install labutil2, replace
 		}
 	
 		capture which coefplot
 		if _rc == 111 {                 
-			noi dis "Installing coefplot"
+			noi dis as text "Installing coefplot"
 			ssc install coefplot, replace
 		}	
 	}
@@ -138,11 +156,11 @@ qui {
   
 *** Keep required variables and check for missings
 	if `studypooling'==0 {
-		keep              `varlist' `beta'   `origpath'   `se' `pval' `zscore'   `decisions'   `df' `mean'   `sameunits'   `orig_in_multiverse'   `prefpath'   `beta2' `se2' `pval2' `zscore2'  `ivF' `signfirst' 
+		keep              `varlist' `beta'   `origpath'   `se' `pval' `zscore'   `decisions'   `df' `mean'   `sameunits'   `orig_in_multiverse'   `prefpath'   `beta2' `se2' `pval2' `zscore2'  `atFvar' `pval_ar' `signfirst' 
 
-		noi misstable sum `varlist' `beta'   `origpath'   `se' `pval' `zscore'   `decisions'   `df' `mean'   `sameunits'   `orig_in_multiverse'   `prefpath'   `beta2' `se2' `pval2' `zscore2'  `ivF' `signfirst'
+		noi misstable sum `varlist' `beta'   `origpath'   `se' `pval' `zscore'   `decisions'   `df' `mean'   `sameunits'   `orig_in_multiverse'   `prefpath'   `beta2' `se2' `pval2' `zscore2'  `atFvar' `pval_ar' `signfirst'
 		if `r(N_eq_dot)'!=. | `r(N_gt_dot)'!=. {
-			noi dis _newline(1) "The table above informs about missings in the data. It is recommended that none of the data include such missings."
+			noi dis as text _newline(1) "The table above shows missing values in the data. The dataset should not contain these missings to ensure that the indicators are calculated correctly."
 		}
 	}
 	// if studypooling==1: the repframe command creates datasets as input to studypooling==1 that are already tailored to the set of required variables
@@ -168,6 +186,17 @@ qui {
 
 	qui tab mainvar 
 	local N_results = `r(r)'
+
+*** Option studypooling
+	// already defined early on in PART 1
+	// additionally check options that are not compatible with studypooling==1 
+	foreach option in beta origpath   se pval zscore   decisions   df mean sameunits   orig_in_multiverse prefpath   beta2 se2 pval2 zscore2   pval_ar {
+		if `studypooling'==1 & "``option''"!="" {
+			noi dis as text "-repframe- ignores the input to the option {opt `option'()} when {opt studypooling(1)} is specified, because {opt `option'()} requires input data at the level of individual analysis paths, whereas {opt studypooling(1)} requires study-level input data."
+		}
+	}
+	// -repframe- returns more specific error messages for other options that are not compatible with studypooling==1, namely siglevel, siglevel_orig, shortref, ivarweight, vshortref_orig, tFinput, and aggregation. 
+	// accordingly, parameters allowed to be used with studypooling are filepath, fileidentifier, tabfmt, dashboard, customindicators, and graphfmt as well as shelvedind and signfirst.
 
 *** Options beta, se, pval, zscore (& df), origpath, shortref
 	if `studypooling'==0 {	
@@ -225,11 +254,11 @@ qui {
 		}
 	
 		if ("`se'"=="" | "`pval'"=="") {
-			noi dis _newline(1) "It is recommended to specify both {opt se()} and {opt pval()}. The command {cmd:repframe} otherwise determines the non-specified variables based on the {it:t}-test formula assuming normality, which may not be appropriate in all cases, e.g. when having few degrees of freedom because {opt svy:} is used in the original estimations."
+			noi dis as text _newline(1) "It is recommended to specify both {opt se()} and {opt pval()}. The command {cmd:repframe} otherwise determines the non-specified variables based on the {it:t}-test formula assuming normality, which may not be appropriate in all cases, e.g. when having few degrees of freedom because {opt svy:} is used in the original estimations."
 		}
 
 		if "`se'"=="" & "`zscore'"=="" & "`df'"=="" {
-			noi dis "{opt pval()} is specified. Note that it is assumed that these p-values are derived from two-sided t-tests."
+			noi dis as text "{opt pval()} is specified. Note that it is assumed that these p-values are derived from two-sided t-tests."
 			gen     se_i   	= abs(`beta'/invnormal(`pval'/2))	
 		}
 		if "`se'"=="" & "`zscore'"=="" & "`df'"!="" {
@@ -265,6 +294,9 @@ qui {
 			gen pval_i = `pval'
 			drop `pval'
 		}
+	}
+	else {
+		local pval_provided = .
 	}
 	if `studypooling'==1 & "`shortref'"!="" { 
 		noi dis "{red: If {opt studypooling(1)} is specified, {opt shortref()} will be retrieved from the input data so that ({opt shortref()}) is not meant to be used together with option {opt studypooling(1)}.}"	
@@ -317,6 +349,11 @@ qui {
 	if `signum_ra'<10 {
 		local sigdigits_ra 0`signum_ra'
 	}
+	if `signum_ra'<1 {
+		noi dis "{red: Please specify a significance level ({opt siglevel()}) above 1 (i.e. above the 1% level).}"	
+		use `inputdata', clear
+		exit
+	}
 	if `signum_ra'>=10 {
 		local sigdigits_ra `signum_ra'
 	}
@@ -327,18 +364,6 @@ qui {
 	if `signum_oa'>=10 {
 		local sigdigits_oa `signum_oa'
 	}
-
-*** Option studypooling
-	// already defined early on in PART 1
-	// additionally check options that are not compatible with studypooling==1 
-	foreach option in beta origpath   se pval zscore   decisions   df mean sameunits   orig_in_multiverse prefpath   beta2 se2 pval2 zscore2   ivF {
-		if `studypooling'==1 & "`option'"!="" {
-			noi dis "-repframe- does not consider the input to the option {opt `option'()} when {opt studypooling(1)}, because {opt `option'()} requires input data at the level of individual analysis paths, whereas {opt studypooling(1)} requires study-level input data."
-		}
-	}
-	// -repframe- returns more specific error messages for other options that are not compatible with studypooling==1, namely siglevel, siglevel_orig, shortref, ivarweight, vshortref_orig, and aggregation. 
-	// accordingly, parameters allowed to be used with studypooling are filepath, fileidentifier, tabfmt, dashboard, extended, and graphfmt as well as shelvedind and signfirst.
-
 
 *** Option decisions
 	if `studypooling'==0 & "`decisions'"!="" {		
@@ -442,7 +467,7 @@ qui {
 *** Options ivarweight, mean, orig_in_multiverse, prefpath
 	if `studypooling'==1 {
 		if "`ivarweight'"=="1" {
-			noi dis "{red: The option {opt ivarweight(1) cannot be used together with the option {opt studypooling(1)}. The input data should instead include a variable {it:ivarweight_stud_d} containing information on ionverse variance weighting at study level}.}"
+			noi dis "{red: The option {opt ivarweight(1)} cannot be used together with the option {opt studypooling(1)}. The input data should instead include a variable {it:ivarweight_stud_d} containing information on inverse variance weighting at study level.}"
 			use `inputdata', clear
 			exit
 		}
@@ -460,7 +485,7 @@ qui {
 
 		if "`orig_in_multiverse'"=="" {
 			gen orig_in_multiverse_i = 0
-			noi dis "Note that, because the option {opt orig_in_multiverse()} was not specified, the {it:repframe} command adopts for all results the default of 0 (=original specification is not included in multiverse analysis)."
+			noi dis as text "Note that, because the option {opt orig_in_multiverse()} was not specified, the {it:repframe} command adopts for all results the default of 0 (=original specification is not included in multiverse analysis)."
 		}
 		else {
 			gen orig_in_multiverse_i = `orig_in_multiverse'
@@ -578,29 +603,21 @@ qui {
 *** Option dashboard
 		if beta2_i!=. {
 			local dashboard = 0
-			noi dis "If {opt beta2()} is specified, no Robustness Dashboard is prepared."	
+			noi dis as text "If {opt beta2()} is specified, no Robustness Dashboard is prepared."	
 		}
 	}
  
-*** Options vshortref_orig, extended, aggregation, graphfmt, ivF, signfirst
-	if "`ivF'"=="" & `studypooling'==0 {
-		local tFinclude = 0
-	}
-	// see below for "`ivF'"!="" & `studypooling'==0
-	if "`ivF'"=="" & `studypooling'==1 {
-		capture confirm variable RF2_SIGagr_05tF_osig_ra_all, exact   // check if variable is part of dataset across studies 
-		if !_rc {
-			local tFinclude = 1
+*** Options vshortref_orig, customindicators, aggregation, graphfmt, tFinput, pval_ar, signfirst
+	// check options that are not meant to be used with dashboard==0
+	foreach option in vshortref_orig customindicators aggregation graphfmt tFinput pval_ar signfirst {
+		if `dashboard'==0 & "``option''"!="" {
+			noi dis as text "-repframe- ignores the input to the option {opt `option'()} when {opt dashboard(0)} is specified, because {opt `option'()} is only used to generate the Robustnes Dashboard."
 		}
-		else {
-			local tFinclude = 0
-		} 
 	}
-	if `dashboard'==0 & "`ivF'"!=""  {
-		noi dis "{red: The option {opt ivF()} is not meant to be used together with option {opt dashboard(0)}.}"
-		use `inputdata', clear
-		exit
+	if "`tFinput'"!="" & `studypooling'==1 {
+		noi dis as text "-repframe- ignores the input to the option {opt tFinput()} when {opt studypooling(1)} is specified, because this input is only used to generate the Robustness Dashboard. When {opt studypooling(1)} is selected, the dashboard is limited to using Anderson–Rubin p-values as a weak-IV-robust adjustment method (see {opt pval_ar()})."
 	}
+
 	if `dashboard'==1 {
 		if "`vshortref_orig'"!="" {
 			local ytitle_row0 `vshortref_orig'
@@ -609,17 +626,17 @@ qui {
 			local ytitle_row0 "original estimate"			
 		}
 
-		if ("`extended'"!="" & "`extended'"!="none" & "`extended'"!="SIGswitch") {
-			noi dis "{red: If {opt extended()} is defined, it needs to take on either -none- or -SIGswitch-.}"	
+		if ("`customindicators'"!="" & "`customindicators'"!="default" & "`customindicators'"!="SIGagronly" & "`customindicators'"!="SIGswitch") {
+			noi dis "{red: If {opt customindicators()} is defined, it needs to take on either -default-, -SIGagronly- or -SIGswitch-.}"	
 			use `inputdata', clear
 			exit
 		}
-		if "`extended'"=="" {
-			local extended "none"
+		if "`customindicators'"=="" {
+			local customindicators "default"
 		}
 			
 		if "`aggregation'"=="1" & `studypooling'==0 & `N_results'==1 {
-			noi dis "The option {opt aggregation(1)} is not meant to be used with only one result and is therefore replaced by {opt aggregation(0)}."
+			noi dis as text "The option {opt aggregation(1)} is not meant to be used with only one result and is therefore replaced by {opt aggregation(0)}."
 			local aggregation = 0	
 		}
 		if "`aggregation'"=="" & `studypooling'==0 {
@@ -627,12 +644,12 @@ qui {
 		}
 		if `studypooling'==1 {
 			if "`aggregation'"=="0" { 
-				noi dis "The option {opt aggregation(0)} is not meant to be used together with the option {opt studypooling(1)} and is therefore replaced by {opt aggregation(1)}. Use the option {opt aggregation(1)} at the study level."	
+				noi dis as text "The option {opt aggregation(0)} is not meant to be used together with the option {opt studypooling(1)} and is therefore replaced by {opt aggregation(1)}. Use the option {opt aggregation(1)} at the study level."	
 			}
 			local aggregation = 1
 
 			if "`vshortref_orig'"!="" {
-				noi dis "The option {opt vshortref_orig()} is only considered for {opt aggregation(0)}, which is not meant to be used together with the option {opt studypooling(1)}. It is therefore not considered."	
+				noi dis as text "The option {opt vshortref_orig()} is only considered for {opt aggregation(0)}, which is not meant to be used together with the option {opt studypooling(1)}. It is therefore not considered."	
 			}
 		}
 
@@ -644,83 +661,169 @@ qui {
 				local graphfmt tif
 			}
 		}
-			
-		** tF Standard Error Adjustment presented in Robustness Dashboard - based on lookup Table from Lee et al. (2022)
-		if "`ivF'"!="" & `studypooling'==0 {
-			local tFinclude = 1
-				
-			matrix tF_c05 = (4,4.008,4.015,4.023,4.031,4.04,4.049,4.059,4.068,4.079,4.09,4.101,4.113,4.125,4.138,4.151,4.166,4.18,4.196,4.212,4.229,4.247,4.265,4.285,4.305,4.326,4.349,4.372,4.396,4.422,4.449,4.477,4.507,4.538,4.57,4.604,4.64,4.678,4.717,4.759,4.803,4.849,4.897,4.948,5.002,5.059,5.119,5.182,5.248,5.319,5.393,5.472,5.556,5.644,5.738,5.838,5.944,6.056,6.176,6.304,6.44,6.585,6.741,6.907,7.085,7.276,7482,7.702,7.94,8.196,8.473,8.773,9.098,9.451,9.835,10.253,10.711,11.214,11.766,12.374,13.048,13.796,14.631,15.566,16.618,17.81,19.167,20.721,22.516,24.605,27.058,29.967,33.457,37.699,42.93,49.495,57.902,68.93,83.823,104.68,100000\9.519,9.305,9.095,8.891,8.691,8.495,8.304,8.117,7.934,7.756,7.581,7.411,7.244,7.081,6.922,6.766,6.614,6.465,6.319,6.177,6.038,5.902,5.77,5.64,5.513,5.389,5.268,5.149,5.033,4.92,4.809,4.701,4.595,4.492,4.391,4.292,4.195,4.101,4.009,3.919,3.83,3.744,3.66,3.578,3.497,3.418,3.341,3.266,3.193,3.121,3.051,2.982,2.915,2.849,2.785,2.723,2.661,2.602,2.543,2.486,2.43,2.375,2.322,2.27,2.218,2.169,2.12,2.072,2.025,1.98,1.935,1.892,1.849,1.808,1.767,1.727,1.688,1.65,1.613,1.577,1.542,1.507,1.473,1.44,1.407,1.376,1.345,1.315,1.285,1.256,1.228,1.2,1.173,1.147,1.121,1.096,1.071,1.047,1.024,1,1)
-					
-			foreach b in lo hi {
-				gen IVF_`b' = .
-				gen adj_`b' = .
-			}
-			forval i = 1(1)100 {
-				local j = `i'+1
-				qui replace IVF_lo = tF_c05[1,`i'] if `ivF' >= tF_c05[1,`i'] & `ivF' < tF_c05[1,`j']
-				qui replace IVF_hi = tF_c05[1,`j'] if `ivF' >= tF_c05[1,`i'] & `ivF' < tF_c05[1,`j']
-				qui replace adj_hi = tF_c05[2,`i'] if `ivF' >= tF_c05[1,`i'] & `ivF' < tF_c05[1,`j']
-				qui replace adj_lo = tF_c05[2,`j'] if `ivF' >= tF_c05[1,`i'] & `ivF' < tF_c05[1,`j']
-			}
-			local IVF_inf = 4 // to be precise, this value - the threshold where the standard error adjustment factor turn infinite - should be ivF=3.8416, but the matrix from Lee et al. only delivers adjustment values up to 4  ("tends to infinity as F approaches 3.84")
-			
-			gen     tF_adj = adj_lo + (IVF_hi  - `ivF')/(IVF_hi  - IVF_lo)  * (adj_hi - adj_lo)  //  "tF Standard Error Adjustment value, according to Lee et al. (2022)" 		
-			label var tF_adj "tF Standard Error Adjustment value, according to Lee et al. (2022)"						
-						
-			** tF-adjusted SE and p-val
-			gen     se_tF = se_i*tF_adj
-								
-			gen     pval_tF = 2*(1 - normal(abs(`beta'/se_tF)))
-			replace pval_tF = 1 if `ivF'<`IVF_inf' 
-			drop IVF_* adj_* tF_adj
+
+		if "`ivadjust'"=="tf" {
+			local ivadjust "tF"
+		}
+		if "`ivadjust'"=="vtf" {
+			local ivadjust "VtF"
+		}
+		if "`ivadjust'"=="VtF" {
+			noi dis as text "If {opt tFinput(VtF [varname])} is selected, the Robustness Dashboard expects that [varname], i.e. the variable with the VtF critical value, is derived at the 5% (1%) significance level if the significance level applied to robustness tests, {opt siglevel()}, is above 1% (equal to 1%)."	
+		}
+
+		if "`tFinput'"!="" & "`ivadjust'"!="0" & "`ivadjust'"!="tF" & "`ivadjust'"!="VtF" {
+			noi dis "{red: The first parameter for the option {opt tFinput()} must be either tF or VtF (spelling them tf or vtf is also allowed).}"
+			use `inputdata', clear
+			exit	
+		}
+
+		if "`tFinput'"=="" & "`pval_ar'"=="" & `studypooling'==0 {
+			local ivadjust 0
+		}
+		// see also above for "`tFinput'"!="" & `studypooling'==0, which had to be processed already in PART 1 by splitting it into VtFvar and VtFlevel
+		if "`tFinput'"!=""  & "`pval_ar'"!="" & `studypooling'==0 {
+			noi dis "{red: Choose either the option {opt tFinput()} or the option {opt pval_ar()} as weak-IV-robust adjustment method. Both should not be specified simultaneously.}"
+			use `inputdata', clear
+			exit
 		}
 		
-		** different indicators to be shown in Robustness Dashboard depending on whether IV/ tF is included
-		if `studypooling'==0 {
-			local check_05_osig = 1
+ 		if "`pval_ar'"!="" & `studypooling'==0 {
+			local ivadjust AR
+
+			gen pval_ar_i = `pval_ar'
+			drop `pval_ar'
 		}
-		else {
-			capture confirm variable RF2_SIGagr_05_osig_ra_all, exact   // check if variable is part of dataset across studies 
-    		if !_rc {
-				local check_05_osig = 1
+
+		if "`pval_ar'"=="" & `studypooling'==1 {
+			capture confirm variable RF2_SIGagr_05iva_osig_ra_all, exact   // check if variable is part of dataset across studies 
+			if !_rc {
+				local ivadjust AR
 			}
 			else {
-				local check_05_osig = 0
+				local ivadjust 0
+			}
+			capture confirm variable RF2_SIGagr_01iva_osig_ra_all, exact   // check if variable is part of dataset across studies 
+			if !_rc {
+				local ivadjust AR
 			}
 		}
-		if `tFinclude'==1 {			
-			if `signum_ra'!=5 & `check_05_osig'==1 {
-				local RF2_SIGagr_05        			RF2_SIGagr_05        		RF2_SIGagr_05tF
-				local RF2_SIGagr_05_j      			RF2_SIGagr_05_j      		RF2_SIGagr_05tF_j
-				local RF2_SIGagr_05_osig    		RF2_SIGagr_05_osig 			RF2_SIGagr_05tF_osig
-				local RF2_SIGagr_05_onsig    		RF2_SIGagr_05_onsig 		RF2_SIGagr_05tF_onsig
-				local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05tF_osig_ra_all
-				local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05tF_onsig_ra_all
-			}
-			if `signum_ra'==5 & `check_05_osig'==1 {
-				local RF2_SIGagr_05       			RF2_SIGagr_05tF
-				local RF2_SIGagr_05_j      			RF2_SIGagr_05tF_j
-				local RF2_SIGagr_05_osig    		RF2_SIGagr_05tF_osig
-				local RF2_SIGagr_05_onsig    		RF2_SIGagr_05tF_onsig
-				local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05tF_osig_ra_all
-				local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05tF_onsig_ra_all
+		
+		** tF Standard Error Adjustment presented in Robustness Dashboard - based on lookup Table from Lee et al. (2022)
+		if "`ivadjust'"=="tF" & `studypooling'==0 {		
+			matrix tF_c05 = (4,4.008,4.015,4.023,4.031,4.04,4.049,4.059,4.068,4.079,4.09,4.101,4.113,4.125,4.138,4.151,4.166,4.18,4.196,4.212,4.229,4.247,4.265,4.285,4.305,4.326,4.349,4.372,4.396,4.422,4.449,4.477,4.507,4.538,4.57,4.604,4.64,4.678,4.717,4.759,4.803,4.849,4.897,4.948,5.002,5.059,5.119,5.182,5.248,5.319,5.393,5.472,5.556,5.644,5.738,5.838,5.944,6.056,6.176,6.304,6.44,6.585,6.741,6.907,7.085,7.276,7482,7.702,7.94,8.196,8.473,8.773,9.098,9.451,9.835,10.253,10.711,11.214,11.766,12.374,13.048,13.796,14.631,15.566,16.618,17.81,19.167,20.721,22.516,24.605,27.058,29.967,33.457,37.699,42.93,49.495,57.902,68.93,83.823,104.68,100000\9.519,9.305,9.095,8.891,8.691,8.495,8.304,8.117,7.934,7.756,7.581,7.411,7.244,7.081,6.922,6.766,6.614,6.465,6.319,6.177,6.038,5.902,5.77,5.64,5.513,5.389,5.268,5.149,5.033,4.92,4.809,4.701,4.595,4.492,4.391,4.292,4.195,4.101,4.009,3.919,3.83,3.744,3.66,3.578,3.497,3.418,3.341,3.266,3.193,3.121,3.051,2.982,2.915,2.849,2.785,2.723,2.661,2.602,2.543,2.486,2.43,2.375,2.322,2.27,2.218,2.169,2.12,2.072,2.025,1.98,1.935,1.892,1.849,1.808,1.767,1.727,1.688,1.65,1.613,1.577,1.542,1.507,1.473,1.44,1.407,1.376,1.345,1.315,1.285,1.256,1.228,1.2,1.173,1.147,1.121,1.096,1.071,1.047,1.024,1,1)
+
+			matrix tF_c01 = (6.670,6.673,6.676,6.679,6.682,6.685,6.689,6.693,6.697,6.701,6.706,6.711,6.717,6.723,6.729,6.736,6.743,6.751,6.759,6.768,6.778,6.788,6.799,6.811,6.824,6.837,6.852,6.867,6.884,6.901,6.920,6.941,6.963,6.986,7.011,7.038,7.066,7.097,7.129,7.164,7.202,7.242,7.285,7.331,7.380,7.432,7.489,7.549,7.614,7.683,7.757,7.836,7.922,8.013,8.111,8.216,8.329,8.451,8.581,8.721,8.872,9.035,9.210,9.399,9.603,9.824,10.062,10.320,10.600,10.904,11.235,11.595,11.988,12.418,12.889,13.407,13.979,14.610,15.312,16.094,16.969,17.953,19.067,20.333,21.783,23.455,25.399,27.680,30.383,33.624,37.560,42.416,48.511,56.324,66.592,80.502,100.069,128.950,174.370,252.342,100000\35.366,34.135,32.946,31.798,30.691,29.622,28.591,27.595,26.634,25.706,24.811,23.947,23.113,22.308,21.531,20.781,20.058,19.359,18.685,18.034,17.406,16.800,16.215,15.650,15.105,14.579,14.072,13.581,13.109,12.652,12.211,11.786,11.376,10.980,10.597,10.228,9.872,9.528,9.196,8.876,8.567,8.269,7.981,7.703,7.435,7.176,6.926,6.685,6.452,6.227,6.010,5.801,5.599,5.404,5.216,5.034,4.859,4.690,4.526,4.369,4.217,4.070,3.928,3.791,3.659,3.532,3.409,3.290,3.176,3.065,2.958,2.855,2.756,2.660,2.567,2.478,2.392,2.308,2.228,2.150,2.076,2.003,1.934,1.866,1.801,1.739,1.678,1.620,1.563,1.509,1.456,1.406,1.357,1.309,1.264,1.220,1.177,1.136,1.097,1.059,1.059)
+			// for simplicity, values from lookup tables from LEe et al. (2022) are used instead of the user-written command -tF-, see https://irs.princeton.edu/davidlee-supplementarytF
+
+			forval p2 = 5(-4)1 {
+				foreach b in lo hi {
+					gen IVF0`p2'_`b' = .
+					gen adj0`p2'_`b' = .
+				}
+				forval i = 1(1)100 {
+					local j = `i'+1
+					qui replace IVF0`p2'_lo = tF_c0`p2'[1,`i'] if `atFvar' >= tF_c0`p2'[1,`i'] & `atFvar' < tF_c0`p2'[1,`j']
+					qui replace IVF0`p2'_hi = tF_c0`p2'[1,`j'] if `atFvar' >= tF_c0`p2'[1,`i'] & `atFvar' < tF_c0`p2'[1,`j']
+					qui replace adj0`p2'_hi = tF_c0`p2'[2,`i'] if `atFvar' >= tF_c0`p2'[1,`i'] & `atFvar' < tF_c0`p2'[1,`j']
+					qui replace adj0`p2'_lo = tF_c0`p2'[2,`j'] if `atFvar' >= tF_c0`p2'[1,`i'] & `atFvar' < tF_c0`p2'[1,`j']
+				}
+				local IVF05_inf = 4 // to be precise, this value - the threshold where the standard error adjustment factor turns infinite - should be First-stage F-Stat(=atFvar)=3.8416, but the matrix from Lee et al. only delivers adjustment values up to 4  ("tends to infinity as F approaches 3.84")
+				local IVF01_inf = 6.67 // to be precise, this value - the threshold where the standard error adjustment factor turns infinite - should be First-stage F-Stat(=atFvar)=6.635776 (2.576^2), but the matrix from Lee et al. only delivers adjustment values up to 6.670
+				
+				gen     tF0`p2'_adj = adj0`p2'_lo + (IVF0`p2'_hi  - `atFvar')/(IVF0`p2'_hi  - IVF0`p2'_lo)  * (adj0`p2'_hi - adj0`p2'_lo)  //  "tF Standard Error Adjustment value, according to Lee et al. (2022)" 		
+				label var tF0`p2'_adj "tF Standard Error Adjustment value (`p2'% level), according to Lee et al. (2022)"						
+							
+				** tF-adjusted SE and p-val
+				gen     se_0`p2'tF_i = se_i*tF0`p2'_adj
+									
+				gen     pval_0`p2'tF_i = 2*(1 - normal(abs(`beta'/se_0`p2'tF_i)))
+				replace pval_0`p2'tF_i = 1 if `atFvar'<`IVF0`p2'_inf' 
+				drop IVF0`p2'_* adj0`p2'_* tF0`p2'_adj se_0`p2'tF_i
 			}
 		}
-		if `tFinclude'!=1 & `signum_ra'!=5 & `check_05_osig'==1 {
-			local RF2_SIGagr_05        			RF2_SIGagr_05
-			local RF2_SIGagr_05_j      			RF2_SIGagr_05_j
-			local RF2_SIGagr_05_osig   			RF2_SIGagr_05_osig
-			local RF2_SIGagr_05_onsig  			RF2_SIGagr_05_onsig
-			local RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05_osig_ra_all
-			local RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all
+		
+		** different indicators to be shown in Robustness Dashboard depending on whether IV adjustment is made
+		local check_05_osig_all = 1
+		if `studypooling'==1 {
+			capture confirm variable RF2_SIGagr_05_osig_ra_all, exact   // check if variable is part of dataset across studies 
+    		if !_rc {
+				local check_05_osig_all = 1
+			}
+			else {
+				local check_05_osig_all = 0
+			}
 		}
-		if (`tFinclude'!=1 & `signum_ra'==5) | `check_05_osig'==0 {
-			local RF2_SIGagr_05        
-			local RF2_SIGagr_05_j      
-			local RF2_SIGagr_05_osig
-			local RF2_SIGagr_05_onsig    
-			local RF2_SIGagr_05_osig_ra_all
-			local RF2_SIGagr_05_onsig_ra_all
+		if "`ivadjust'"!="0" {		
+			** case 1 - 3: weak-IV adjustment
+			** case 1, siglevel>5%: add SIGagr for 5% and 5% weak-IV adjusted (be it tF,VtF, or AR) 	
+			if `signum_ra'>5 {
+				local RF2_SIGagr_0x        			RF2_SIGagr_05        		RF2_SIGagr_05iva
+				local RF2_SIGagr_0x_j      			RF2_SIGagr_05_j      		RF2_SIGagr_05iva_j
+				local RF2_SIGagr_0x_osig    		RF2_SIGagr_05_osig 			RF2_SIGagr_05iva_osig
+				local RF2_SIGagr_0x_onsig    		RF2_SIGagr_05_onsig 		RF2_SIGagr_05iva_onsig
+
+				// for pooled results (*_all), the dashboard considers - for simplicity - only AR p-values, not the (V)tF-adjusted values
+				if "`ivadjust'"=="AR" {
+					local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05iva_osig_ra_all
+					local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05iva_onsig_ra_all
+				}
+				else {
+					local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	
+					local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all	
+				}
+			}
+			** case 2, siglevel 5%>=X>1%: SIGagr for X% already shown in bubble, only add SIGagr for 5% weak-IV adjusted (be it tF,VtF, or AR) 
+			if `signum_ra'<=5 & `signum_ra'>1  {
+				local RF2_SIGagr_0x       										RF2_SIGagr_05iva
+				local RF2_SIGagr_0x_j      										RF2_SIGagr_05iva_j
+				local RF2_SIGagr_0x_osig    									RF2_SIGagr_05iva_osig
+				local RF2_SIGagr_0x_onsig    									RF2_SIGagr_05iva_onsig
+
+				if "`ivadjust'"=="AR" {
+					local RF2_SIGagr_0x_osig_ra_all 								RF2_SIGagr_05iva_osig_ra_all
+					local RF2_SIGagr_0x_onsig_ra_all								RF2_SIGagr_05iva_onsig_ra_all
+				}
+				else {
+					local RF2_SIGagr_0x_osig_ra_all 								
+					local RF2_SIGagr_0x_onsig_ra_all 								
+				}
+			}
+			** case 3, siglevel=1%: SIGagr for 1% already shown in bubble, only add SIGagr for 1% weak-IV adjusted (be it tF,VtF, or AR)   
+			if `signum_ra'==1  {
+				local RF2_SIGagr_0x       										RF2_SIGagr_01iva
+				local RF2_SIGagr_0x_j      										RF2_SIGagr_01iva_j
+				local RF2_SIGagr_0x_osig    									RF2_SIGagr_01iva_osig
+				local RF2_SIGagr_0x_onsig    									RF2_SIGagr_01iva_onsig
+
+				if "`ivadjust'"=="AR" {
+					local RF2_SIGagr_0x_osig_ra_all 								RF2_SIGagr_01iva_osig_ra_all
+					local RF2_SIGagr_0x_onsig_ra_all								RF2_SIGagr_01iva_onsig_ra_all
+				}
+				else {
+					local RF2_SIGagr_0x_osig_ra_all 								
+					local RF2_SIGagr_0x_onsig_ra_all 								
+				}
+			}
+		}
+		** case 4 - 5: no weak-IV adjustment
+		** case 4, siglevel>5%: add SIGagr for 5%, only when siglevel>5%
+		if "`ivadjust'"=="0" & `signum_ra'>5 {
+			local RF2_SIGagr_0x        			RF2_SIGagr_05
+			local RF2_SIGagr_0x_j      			RF2_SIGagr_05_j
+			local RF2_SIGagr_0x_osig   			RF2_SIGagr_05_osig
+			local RF2_SIGagr_0x_onsig  			RF2_SIGagr_05_onsig
+			local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all
+			local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all
+		}
+		** case 5, siglevel<=5% OR pooled study data without RF2_SIGagr_05_osig_ra_all: no additional statistics
+		if ("`ivadjust'"=="0" & `signum_ra'<=5) | `check_05_osig_all'==0 {
+			local RF2_SIGagr_0x        
+			local RF2_SIGagr_0x_j      
+			local RF2_SIGagr_0x_osig
+			local RF2_SIGagr_0x_onsig    
+			local RF2_SIGagr_0x_osig_ra_all
+			local RF2_SIGagr_0x_onsig_ra_all
 		}
 	}
 
@@ -741,6 +844,25 @@ qui {
 				               gen x_`var'_orig_j = `var'_i if origpath_i==1
 				bysort mainvar: egen `var'_orig_j = min(x_`var'_orig_j)
 			}
+		}
+		local pval_iva_orig_j // empty local
+		if "`ivadjust'"!="0" {	
+			if  `signum_ra'>1 {
+				local iva_level = 5
+			}
+			if  `signum_ra'==1 { 
+				local iva_level = 1
+			}
+		}
+		if "`ivadjust'"=="tF" {
+			               gen x_pval_0`iva_level'iva_orig_j = pval_0`iva_level'tF_i if origpath_i==1
+			bysort mainvar: egen pval_0`iva_level'iva_orig_j = min(x_pval_0`iva_level'iva_orig_j)
+			local pval_iva_orig_j   pval_0`iva_level'iva_orig_j
+		}
+		if "`ivadjust'"=="AR" {
+			               gen x_pval_0`iva_level'iva_orig_j = pval_ar_i if origpath_i==1
+			bysort mainvar: egen pval_0`iva_level'iva_orig_j = min(x_pval_0`iva_level'iva_orig_j)
+			local pval_iva_orig_j   pval_0`iva_level'iva_orig_j
 		}
 		drop beta_i mean_i
 
@@ -903,11 +1025,11 @@ qui {
 		local RF_list_nosfx  	`RF_list_nosfx'  RF_robratio_A RF_robratio_B RF_pooledH_A RF_pooledH_B
 	}
 	
-	local RF2_list_j 			RF2_SIGagr_j 		  	`RF2_SIGagr_05_j' 			 RF2_SIGagr_ndir_j  			RF2_ESrel_j           RF2_ESvar_j 			RF2_SIGvar_nsig_j   		 RF2_SIGvar_sig_j  				RF2_ESagr_j				RF2_SIGagr_sigdef_j 	       RF2_SIGcfm_oas_j 		   RF2_SIGcfm_oan_j  								    	RF2_SIGsw_btonsig_j 			RF2_SIGsw_btosig_j  			RF2_SIGsw_setonsig_j 	RF2_SIGsw_setosig_j      
-	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_05_osig_ra_all'  RF2_SIGagr_ndir_osig_ra_all    RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all									RF2_ESagr_osig_ra_all   RF2_SIGagr_sigdef_osig_ra_all  RF2_SIGcfm_oas_osig_ra_all  RF2_SIGcfm_oan_osig_ra_all  RF2_SIGcfm_uni_osig_ra_all	RF2_SIGsw_btonsig_osig_ra_all 									RF2_SIGsw_setonsig_osig_ra_all 
-	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_05_onsig_ra_all' RF2_SIGagr_ndir_onsig_ra_all   											RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all							RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all  								RF2_SIGsw_btosig_onsig_ra_all 							RF2_SIGsw_setosig_onsig_ra_all 
-	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_05' RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                 RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan  RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
-	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_05' RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig  RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan             RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
+	local RF2_list_j 			RF2_SIGagr_j 		  	`RF2_SIGagr_0x_j' 			 RF2_SIGagr_ndir_j  			RF2_ESrel_j           RF2_ESvar_j 			RF2_SIGvar_nsig_j   		 RF2_SIGvar_sig_j  				RF2_ESagr_j				RF2_SIGagr_sigdef_j 	       RF2_SIGcfm_oas_j 		   RF2_SIGcfm_oan_j  								    	RF2_SIGsw_btonsig_j 			RF2_SIGsw_btosig_j  			RF2_SIGsw_setonsig_j 	RF2_SIGsw_setosig_j      
+	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_0x_osig_ra_all'  RF2_SIGagr_ndir_osig_ra_all    RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all									RF2_ESagr_osig_ra_all   RF2_SIGagr_sigdef_osig_ra_all  RF2_SIGcfm_oas_osig_ra_all  RF2_SIGcfm_oan_osig_ra_all  RF2_SIGcfm_uni_osig_ra_all	RF2_SIGsw_btonsig_osig_ra_all 									RF2_SIGsw_setonsig_osig_ra_all 
+	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_0x_onsig_ra_all' RF2_SIGagr_ndir_onsig_ra_all   											RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all							RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all  								RF2_SIGsw_btosig_onsig_ra_all 							RF2_SIGsw_setosig_onsig_ra_all 
+	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_0x' RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                 RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan  RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
+	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_0x' RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig  RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan             RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
 
 
 	if `studypooling'==0 {
@@ -943,15 +1065,25 @@ qui {
 			
 		** (1') Significance agreement - alternative indicator set	
 			// not for beta2_orig_j==1 | beta2_i==1
-					     gen x_RF2_SIGagr_i		= (pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j)*100 	if beta2_orig_j==. & beta2_i==. & origpath_i!=1
-		bysort mainvar: egen   RF2_SIGagr_j    	= mean(x_RF2_SIGagr_i) 
+					     gen x_RF2_SIGagr_i				= (pval_i<=0.`sigdigits_ra' & beta_dir_i==beta_orig_dir_j)*100	if beta2_orig_j==. & beta2_i==. & origpath_i!=1
+		bysort mainvar: egen   RF2_SIGagr_j    			= mean(x_RF2_SIGagr_i) 
 
-		if `tFinclude'==1 {
-						 gen x_RF2_SIGagr_05tF_i	= (pval_tF<0.05 & beta_dir_i==beta_orig_dir_j)*100 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1
-		bysort mainvar: egen   RF2_SIGagr_05tF_j 	= mean(x_RF2_SIGagr_05tF_i)	
+
+		if "`ivadjust'"=="tF" {
+						 gen x_RF2_SIGagr_0`iva_level'iva_i	= (pval_0`iva_level'tF_i<=0.0`iva_level' & beta_dir_i==beta_orig_dir_j)*100 	if beta2_orig_j==. & beta2_i==. & origpath_i!=1 & pval_0`iva_level'tF_i!=.
+		bysort mainvar: egen   RF2_SIGagr_0`iva_level'iva_j 	= mean(x_RF2_SIGagr_0`iva_level'iva_i)	
 		}
+		if "`ivadjust'"=="VtF" {
+			             gen x_RF2_SIGagr_0`iva_level'iva_i = (abs(`beta'/se_i) > `atFvar' & beta_dir_i==beta_orig_dir_j)*100 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1
+		bysort mainvar: egen   RF2_SIGagr_0`iva_level'iva_j 	= mean(x_RF2_SIGagr_0`iva_level'iva_i)
+		}
+		if "`ivadjust'"=="AR" {
+						 gen x_RF2_SIGagr_0`iva_level'iva_i	= (pval_ar_i<=0.0`iva_level' & beta_dir_i==beta_orig_dir_j)*100 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1 & pval_ar_i!=.
+		bysort mainvar: egen   RF2_SIGagr_0`iva_level'iva_j 	= mean(x_RF2_SIGagr_0`iva_level'iva_i)	
+		}
+
 		if `signum_ra'!=5  {
-						 gen x_RF2_SIGagr_05_i		= (pval_i<0.05  & beta_dir_i==beta_orig_dir_j)*100	 			if beta2_orig_j==. & beta2_i==. & origpath_i!=1
+						 gen x_RF2_SIGagr_05_i		= (pval_i<0.05  & beta_dir_i==beta_orig_dir_j)*100	 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1
 		bysort mainvar: egen   RF2_SIGagr_05_j  	= mean(x_RF2_SIGagr_05_i)
 		}
 
@@ -1042,12 +1174,12 @@ qui {
 
 		** (5') Effect size agreement - alternative indicator set
 			// only for sameunits_i==1 and not for beta2_orig_j==1 | beta2_i==1
-		 if "`df'"=="" {
+		if "`df'"=="" {
 			gen x_z_crit = abs(invnormal(0.`sigdigits_ra'/2))
-		 }
-		 else {
+		}
+		else {
 			gen x_z_crit = abs(invt(`df', 0.`sigdigits_ra'/2))
-		 }
+		}
 			
 		gen x_RF2_ESagr_ci_up_`signum_ra' = beta_orig_j + x_z_crit*se_orig_j   
 		gen x_RF2_ESagr_ci_lo_`signum_ra' = beta_orig_j - x_z_crit*se_orig_j
@@ -1199,10 +1331,10 @@ qui {
 		capture confirm variable decision_1x, exact   // check if `decisions' was defined by whether there is at least a variable callled decision_1 generated above
 		if !_rc {
 
-			noi dis _newline(1) "** Three plots showing the contributions of individual decisions to deviations in indicator values"
-			noi dis "(1) Single-Choice Deviation Plot (ch_deviation): A plot showing the change in a robustness indicator due to fixing a single decision to an alternative choice that deviates from the original specification, while all other decisions are allowed to vary according to the multiverse analysis."
-			noi dis "(2) Stepwise Deviation Plot (stepwise): A plot illustrating the cumulative change in a robustness indicators as an increasing number of decisions deviate simultaneously from the original specification, while all other decisions are fixed to their original specification choices." 
-			noi dis "(3) Single-Decision Reversion Plot (dec_reversion): A plot showing the change in a robustness indicator due to fixing a single decision to its original specification choice, while all other decisions are allowed to vary according to the multiverse analysis."
+			noi dis as text _newline(1) "** Three plots showing the contributions of individual decisions to deviations in indicator values"
+			noi dis as text "(1) Single-Choice Deviation Plot (ch_deviation): A plot showing the change in a robustness indicator due to fixing a single decision to an alternative choice that deviates from the original specification, while all other decisions are allowed to vary according to the multiverse analysis."
+			noi dis as text "(2) Stepwise Deviation Plot (stepwise): A plot illustrating the cumulative change in a robustness indicator as an increasing number of decisions deviate simultaneously from the original specification, while all other decisions are fixed to their original specification choices." 
+			noi dis as text "(3) Single-Decision Reversion Plot (dec_reversion): A plot showing the change in a robustness indicator due to fixing a single decision to its original specification choice, while all other decisions are allowed to vary according to the multiverse analysis."
 			noi dis _newline(1) 
 
 
@@ -1588,16 +1720,16 @@ qui {
 				** show note that contribution plots would involve too many decisions and/ or decision choices and/ or decision variations
 				if (`chlevels_N_max'>99 | `d_count'>99) {
 					if "`I'"=="SIGagr" {		// show note in results window only once (not for "`I'"=="ESrel")
-						noi dis "The analyis involves a huge number of decisions and/ or decision choices (100 or more). The Contribution Plots are therefore not produced. Consider creating individual Contribution Plots by running the {it:repframe} command separately for individual results, or alternatively check whether choices treated as separate decisions do not effectively belong to the same decision dimension." 
+						noi dis as text "The analyis involves a huge number of decisions and/ or decision choices (100 or more). The Contribution Plots are therefore not produced. Consider creating individual Contribution Plots by running the {it:repframe} command separately for individual results, or alternatively check whether choices treated as separate decisions do not effectively belong to the same decision dimension." 
 					}
 				}
 				else{
 					if "`I'"=="SIGagr" {		// show note in results window only once (not for "`I'"=="ESrel")
 						if (`chlevels_N_max'>9 | `d_count'>9) {
-							noi dis "The analyis involves many decisions and/ or decision choices (10 or more). The Contribution Plots may therefore not be presented in a nice way. Consider creating individual Contribution Plots by running the {it:repframe} command separately for individual results, or alternatively check whether choices treated as separate decisions do not effectively belong to the same decision dimension." 
+							noi dis as text "The analyis involves many decisions and/ or decision choices (10 or more). The Contribution Plots may therefore not be presented in a nice way. Consider creating individual Contribution Plots by running the {it:repframe} command separately for individual results, or alternatively check whether choices treated as separate decisions do not effectively belong to the same decision dimension." 
 						}
 						if `vrts_N_max'>`vrts_matrix_N' {
-							noi dis "Note that the analyis involves `vrts_N_max' decision variations for at least one of the results. The Contribution Plot by the number of variations will only show values for up to `vrts_matrix_N' variations." 
+							noi dis as text "Note that the analyis involves `vrts_N_max' decision variations for at least one of the results. The Contribution Plot by the number of variations will only show values for up to `vrts_matrix_N' variations." 
 						}
 					}
 
@@ -1848,8 +1980,8 @@ qui {
 								}
 						
 								if `hbar_n'==1 & `ch_deviation_r`rsltvar'_adj'==1 & "`I'"=="SIGagr" {  // show note in results window only once (not for "`I'"=="ESrel")
-									noi dis _newline(1) "Note on the Contribution Plots:"
-									noi dis "* = reference for result -`mainvar_active'- is not the original specification, but the specification where all choices are set to the original specification choices except for decision(s) -`r`rsltvar'_bvrdnincl_name_list'-. This is done because the original choice(s) is (are) not included in the multiverse analysis for this (these) decision(s), whereas one alternative choice (each) is included in the multiverse analysis."  
+									noi dis as text _newline(1) "Note on the Contribution Plots:"
+									noi dis as text "* = reference for result -`mainvar_active'- is not the original specification, but the specification where all choices are set to the original specification choices except for decision(s) -`r`rsltvar'_bvrdnincl_name_list'-. This is done because the original choice(s) is (are) not included in the multiverse analysis for this (these) decision(s), whereas one alternative choice (each) is included in the multiverse analysis."  
 								}
 
 								gen     x2_mainvar_str = x2_mainvar_str1 if x2_mainvar_str_word_count>=3 & x2_mainvar_str_word_count<=8
@@ -1862,7 +1994,7 @@ qui {
 								** additional figure note for the case of... 
 								if `hbar_n'==1 & "`r`rsltvar'_cvrdnincl_name_list'"!="" {
 									if "`I'"=="SIGagr" {		// show note in results window only once (not for "`I'"=="ESrel")
-										noi dis _newline(1) "Additional note on Contribution Plots: For the result -`mainvar_active'-, the original choice(s) of the decision(s) -`r`rsltvar'_cvrdnincl_name_list'- is/ are modified in various ways in the multiverse analysis, but the original choice is not included in the multiverse analysis."  
+										noi dis as text _newline(1) "Additional note on Contribution Plots: For the result -`mainvar_active'-, the original choice(s) of the decision(s) -`r`rsltvar'_cvrdnincl_name_list'- is/ are modified in various ways in the multiverse analysis, but the original choice is not included in the multiverse analysis."  
 									}
 								}
 							}
@@ -1913,7 +2045,7 @@ qui {
 								}
 							}
 							else {
-								noi dis "The Contribution Plots are only created if more than one choice / one dimension is varied."
+								noi dis as text "The Contribution Plots are only created if more than one choice / one dimension is varied."
 							}
 						}
 					restore					
@@ -1924,7 +2056,7 @@ qui {
 
 *** Save dataset with one observation per analysis path
 		drop x_* mainvar_in include_in_multiverse  // drop auxiliary variables 
-		capture drop se_tF pval_tF   // drop auxiliary variables if they were generated in the first place, because of ivF() option 
+		capture drop pval_05tF_i pval_01tF_i    // drop auxiliary variables if they were generated in the first place, because of tFinput() option
 		drop beta_rel_i se_rel_i  se_rel_orig_j  beta_abs_orig_p`sigdigits_ra'_j se_orig_p`sigdigits_ra'_j    // drop derivative variables not required anymore - beta_rel_orig_j is later included in the indicator table
 		
 		preserve
@@ -1949,11 +2081,24 @@ qui {
 				label var zscore2_orig_j 	"t/z-score of 2nd estimate in analysis path of original study"
 			}
 
-			local ivF_forsave	// include first-age F-Stat if defined for IV estimations
-			if `tFinclude'==1 {	
-				rename `ivF' ivF_i 
-				local ivF_forsave   ivF_i
+			local iva_forsave	// include first-age F-Stat if defined for IV estimations
+			if "`ivadjust'"=="tF" {	
+				rename `atFvar' ivF_i 
+				rename pval_0`iva_level'iva_orig_j pval_0`iva_level'tF_orig_j
+				local iva_forsave   ivF_i pval_0`iva_level'tF_orig_j
 				label var ivF_i "First-stage F-Statistic for IV estimation in rob. test or original study"
+				label var pval_0`iva_level'tF_orig_j	"p-value in analysis path of original study based on tF-adjusted critical values for `iva_level'% significance"
+			}
+			if "`ivadjust'"=="VtF" {	
+				rename `atFvar' VtF_critval_i 
+				local iva_forsave   VtF_critval_i
+				label var VtF_critval_i "VtF critical value for IV estimation in rob. test or original stud
+			}
+			if "`ivadjust'"=="AR" {	
+				local iva_forsave pval_ar_i	
+				rename pval_0`iva_level'iva_orig_j pval_ar_orig_j
+				label var pval_ar_i 		"AR p-value on stat. sign. of estimate in analysis path of rob. test or orig. study"
+				label var pval_ar_orig_j 	"AR p-value on stat. sign. of estimate in analysis path of orig. study"
 			}
 
 			capture confirm variable decision_1x, exact   // check if `decisions' was defined by whether there is at least a variable callled decision_1 generated above
@@ -1988,7 +2133,7 @@ qui {
 			drop mainvar `beta' RF*  beta_rel_orig_j 
 
 			order beta2_i pval2_i beta2_dir_i  beta2_orig_j pval2_orig_j beta2_orig_dir_j	// variables on second coefficient that are created irrespective of whether second coefficient is part of analysis
-			order ref   mainvar_str   beta_i se_i pval_i zscore_i `df_forsave' beta_dir_i   origpath_i beta_orig_j se_orig_j pval_orig_j zscore_orig_j beta_orig_dir_j   `decisions_forsave'   mean_j mean_orig_j orig_in_multiverse_i `prefpath_forsave' sameunits_i `ivF_forsave'  `coeff2_forsave' 
+			order ref   mainvar_str   beta_i se_i pval_i zscore_i `df_forsave' beta_dir_i   origpath_i beta_orig_j se_orig_j pval_orig_j zscore_orig_j beta_orig_dir_j   `decisions_forsave'   mean_j mean_orig_j orig_in_multiverse_i `prefpath_forsave' sameunits_i `iva_forsave'  `coeff2_forsave' 
 			label var ref 				"study reference"
 			label var mainvar_str   	"result, in string format"
 			label var beta_i 			"beta coeff. in analysis path of rob. test, incl. original beta coeff."
@@ -2023,7 +2168,7 @@ qui {
 		bysort mainvar: gen n_j = _n
 		
 		keep if n_j==1
-		drop n_j  `beta' se_i pval_i zscore_i beta_dir_i `df' `ivF'   beta2_i pval2_i beta2_dir_i   origpath_i orig_in_multiverse_i  sameunits_i   	// drop information at a different level than the aggregated level
+		drop n_j  `beta' se_i pval_i zscore_i beta_dir_i `df' `atFvar'   beta2_i pval2_i beta2_dir_i   origpath_i orig_in_multiverse_i  sameunits_i   	// drop information at a different level than the aggregated level
 		drop      se_orig_j zscore_orig_j   mean_j mean_orig_j	beta2_orig_j pval2_orig_j beta2_orig_dir_j		// drop information not required anymore 
 		capture drop decision_*
 		capture drop se2_i se2_orig_j zscore2_i zscore2_orig_j 
@@ -2172,7 +2317,7 @@ qui {
 		}
 	}			
 	
-	drop RF2_SIGagr_sigdef_osig_ra_all   // RF2_SIGagr_sigdef_j is correct, but aggregating it across results requires some of the missings to be set to zero, which is done in RF2_SIGagr_sigde2_j 
+	drop   RF2_SIGagr_sigdef_osig_ra_all   // RF2_SIGagr_sigdef_j is correct, but aggregating it across results requires some of the missings to be set to zero, which is done in RF2_SIGagr_sigde2_j 
 	rename RF2_SIGagr_sigde2_osig_ra_all RF2_SIGagr_sigdef_osig_ra_all
 
 	** original indicator insig, revised indicator sig at `signum_ra'% level
@@ -2317,9 +2462,21 @@ qui {
 			label var RF2_SIGagr_05_`unit'	"(RF1') Significance agreement (5% level)`label_`unit''"
 		}
 	}
-	if `tFinclude'==1 {
-		foreach unit in j osig_ra_all onsig_ra_all {
-			label var RF2_SIGagr_05tF_`unit' "(RF1') Significance agreement (5% tF level)`label_`unit''"
+	if "`ivadjust'"=="tF" | "`ivadjust'"=="AR"  {
+		foreach unit in j {
+			label var pval_0`iva_level'iva_orig_`unit' "weak-IV adjusted p-value in analysis path of original study (either tF or AR)`label_`unit''"
+		}
+	}
+	if "`ivadjust'"!="0" {
+		foreach unit in j {
+			label var RF2_SIGagr_0`iva_level'iva_`unit' "(RF1') Significance agreement (`iva_level'% level, either tF, VtF or AR)`label_`unit''"
+		}
+	}
+	if "`ivadjust'"=="AR" {
+		foreach unit in osig_ra_all onsig_ra_all {
+			label var RF2_SIGagr_0`iva_level'iva_`unit' "(RF1') Significance agreement (using AR p-values)`label_`unit''"
+			capture note RF2_SIGagr_05iva_`unit': indicator calculation is identical with that of RF2_SIGagr_01iva_`unit'
+			capture note RF2_SIGagr_01iva_`unit': indicator calculation is identical with that of RF2_SIGagr_05iva_`unit'
 		}
 	}
 	
@@ -2389,7 +2546,7 @@ qui {
 	if `dashboard'==1 {
 		use `data_j'
 		if `studypooling'==0 {
-			keep mainvar mainvar_str beta_orig_j beta_rel_orig_j pval_orig_j RF2_* rany* 
+			keep mainvar mainvar_str beta_orig_j beta_rel_orig_j pval_orig_j `pval_iva_orig_j' RF2_* rany* 
 			local ind_level rslt
 		}
 		else {
@@ -2520,7 +2677,7 @@ qui {
 			egen x_mainvar_str_word_count_max = max(x_mainvar_str_word_count)
 			
 			if   x_mainvar_str_word_count_max>8 {
-				noi dis _newline(1) "Consider using shorter labels for the variable {it:mainvar}."
+				noi dis as text _newline(1) "Consider using shorter labels for the variable {it:mainvar}."
 			}
 
 			** define y-xais label
@@ -2583,7 +2740,7 @@ qui {
 			for num 1/3: replace x_share_1X  = 0 											if dashbrd_y==1 & dashbrd_x==X & rany_osig_ra_all==0 & x_share_1X==.			// replace missing by zero if none of the original estimates was sig
 			for num 1/3: replace x_share_2X  = 0 											if dashbrd_y==2 & dashbrd_x==X & rany_osig_ra_all==1 & x_share_2X==.   		// replace missing by zero if all of the original estimates were sig								
 			 
-			foreach styper in `RF2_SIGagr_05' {
+			foreach styper in `RF2_SIGagr_0x' {
 				replace `styper'_onsig_ra_all 	= `styper'_onsig_ra_all  // top right  (insig orig & sig rev)
 				replace `styper'_osig_ra_all   = `styper'_osig_ra_all    // bottom right (sig orig & sig rev)
 			}
@@ -2599,7 +2756,7 @@ qui {
 			for num 1/`yset_n': gen x_share_X3 =       RF2_SIGagr_j  					if dashbrd_y==X	& dashbrd_x==3	//   sig result X, same dir
 		
 			// create variables with indicator information available in all observations
-			foreach var in beta_orig_j beta_rel_orig_j pval_orig_j  `RF2_list_j'  {
+			foreach var in beta_orig_j beta_rel_orig_j pval_orig_j `pval_iva_orig_j'  `RF2_list_j'  {
 				for num 1/`yset_n': gen   x_`var'X = `var' if dashbrd_y==X
 				for num 1/`yset_n': egen    `var'X = mean(x_`var'X)	
 			}
@@ -2709,12 +2866,12 @@ qui {
 
 *** Further rounding of indicators for presentation in the dashboard
 		if `aggregation'==0 {			
-			foreach rI in  beta_rel_orig_j   RF2_ESagr_j    `RF2_SIGagr_j' 		   `RF2_SIGagr_05_j'      RF2_ESrel_j 	 RF2_ESvar_j {
+			foreach rI in  beta_rel_orig_j   RF2_ESagr_j    `RF2_SIGagr_j' 		   `RF2_SIGagr_0x_j'      RF2_ESrel_j 	 RF2_ESvar_j {
 				for num 1/`yset_n': replace `rI'X = round(`rI'X)
 			}
 		}
 		else {			
-			foreach rI in                    RF2_ESagr_osig `RF2_SIGagr_05_osig'   `RF2_SIGagr_05_onsig'  RF2_ESrel_osig RF2_ESvar_osig {
+			foreach rI in                    RF2_ESagr_osig `RF2_SIGagr_0x_osig'   `RF2_SIGagr_0x_onsig'  RF2_ESrel_osig RF2_ESvar_osig {
 				replace   `rI'_ra_all = round(`rI'_ra_all)		
 			}
 		}
@@ -2749,8 +2906,10 @@ qui {
 *** Saving the plotting codes in locals
 		local slist ""
 		forval i = 1/`=_N' {
-			local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']'                                     , mlabposition(0) mlabsize(medsmall) msize(`=share2_size[`i']*0.5*(0.75^(`yset_n'-2))') mcolor("`=colorname_not[`i']'"))"     // first add second circle for different stat. sig. definitions adopted by original authors and in rep. analysis, respectively
-			local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']' "`: display %3.0f =share[`i'] "%" '", mlabposition(0) mlabsize(medsmall) msize(`=share_size[`i']*0.5*(0.75^(`yset_n'-2))')  mcolor("`=colorname[`i']'"))"     // msize defines the size of the circles
+			local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']'                                     , mlabposition(0) mlabsize(medsmall) msize(`=share2_size[`i']*0.5*(0.75^(`yset_n'-2))') mcolor("`=colorname_not[`i']'"))"    // first add second circle for different stat. sig. definitions adopted by original authors and in rep. analysis, respectively
+			if `aggregation'==0 | (`aggregation'==1 & `=dashbrd_y[`i']'==1 & `=share[`i']'!=0 & `osig_ra_rslt_share'!=0) | (`aggregation'==1 & `=dashbrd_y[`i']'==2 & `=share[`i']'!=0 & `onsig_ra_rslt_share'!=0) {							// remove "0%" in aggregate dashboards, if 0 results contributed to the respective group of estimates (orig. sig. / orig. insig.)
+				local slist "`slist' (scatteri `=dashbrd_y[`i']' `=dashbrd_x[`i']' "`: display %3.0f =share[`i'] "%" '", mlabposition(0) mlabsize(medsmall) msize(`=share_size[`i']*0.5*(0.75^(`yset_n'-2))')  mcolor("`=colorname[`i']'"))"    // msize defines the size of the circles
+			}
 		}
 	
 		if "`signfirst'"=="" {
@@ -2813,100 +2972,139 @@ qui {
 				}
 
 				if beta_rel_orig_j`m'==. {
-					local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1]'"   													"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" "'
+					if "`ivadjust'"!="tF" & "`ivadjust'"!="AR" {
+						local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1]'"   													"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" "'
+					}
+					if "`ivadjust'"=="tF" | "`ivadjust'"=="AR" {
+						local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1]'"   													"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" 	"`: display "({it:`ivadjust'}: "  %3.2f pval_0`iva_level'iva_orig_j`m'[1]')" "'
+					}
 				}
 				else {
-					local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1] " [`sign_d_orig`m''" beta_rel_orig_j`m' "%]" '"   	"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" "'
-				}
-			}
-
-			** fill dashboard matrix, with originally significant [R=s] (insignificant [R=n]) rows and columns C=1, ..., n of the dashboard identified by cond_RC
-			if `cond_n1' {
-				if (RF2_SIGagr_sigdef_`sfx_n'!=. & `sigdigits_ra'<`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_n'!=. & `studypooling'==1) {  
-					local y`case_n'x1	`"  "`: display "{it:p}{&le}{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
-				}
-				else {
-					local y`case_n'x1  	`"  	 																	    "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
-				}							
-			}
-			if `cond_n3' {
-				if `tFinclude'!=1 {
-					if `signum_ra'!=5  {
-							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"  		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
-						if "`extended'"=="SIGswitch" | "`extended'"=="both" {
-							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"         "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"      										"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'
-						}
+					if "`ivadjust'"!="tF" & "`ivadjust'"!="AR" {
+						local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1] " [`sign_d_orig`m''" beta_rel_orig_j`m' "%]" '"   	"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" "'
 					}
-					if `signum_ra'==5  {
-							local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'				
-						if "`extended'"=="SIGswitch" | "`extended'"=="both" {
-							local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"											"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '"  "'			
-						}
-					}
-				}
-				if `tFinclude'==1 {
-					if `signum_ra'!=5 {
-							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
-						if "`extended'"=="SIGswitch" | "`extended'"=="both" { 
-							local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%)" '"   	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	
-						}
-					}
-					if `signum_ra'==5 {
-							local y`case_n'x3	`" "`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%" '" 		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
-						if "`extended'"=="SIGswitch" | "`extended'"=="both" {
-							local y`case_n'x3	`" "`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_n'' "%" '"		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	 
-						}
+					if "`ivadjust'"=="tF" | "`ivadjust'"=="AR" {
+						local y`m'x0		`" "`: display "{it:`ytitle_row0'}" '"	"`: display "{&beta}{sup:o}: " %3.2f beta_orig_j`m'[1] " [`sign_d_orig`m''" beta_rel_orig_j`m' "%]" '"   	"`: display "{it:p}{sup:o}: " %3.2f pval_orig_j`m'[1]'" 	"`: display "({it:`ivadjust'}: "  %3.2f pval_0`iva_level'iva_orig_j`m'[1]')" "'
 					}
 				}
 			}
 
-			if `cond_s1' {
-				if "`extended'"=="none" {
-					local y`case_s'x1 	`" "`: display "{&beta} in CI({&beta}{sup:o}): "  `=RF2_ESagr_`sfx_s'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_s''"  "'
-				}
-				if "`extended'"=="SIGswitch" {
-					local y`case_s'x1 	`" "`: display "{&beta} in CI({&beta}{sup:o}): "  `=RF2_ESagr_`sfx_s'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_s''"    "`: display "low |{&beta}|: " %3.0f RF2_SIGsw_btonsig_`sfx_s' "%;  high se: " %3.0f RF2_SIGsw_setonsig_`sfx_s' "%" '" "' 
+			// if basic dashboard, add sig.agreement indicator for 5% level if siglevel(>5) below main indicator in bubble
+			if "`customindicators'"=="SIGagronly" {
+				if `signum_ra'>5  {
+					if `cond_n3' {
+						local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"  "'
+					}
+					if `cond_s3' {
+						local y`case_s'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"  "'
+					}
 				}
 			}
-			if `cond_s3' {
-				if `tFinclude'==1 {
-					if `signum_ra'!=5 {
-						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  
-							local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+
+			// if default or extended dashboard, add everything else below main indicator in bubble
+			if "`customindicators'"!="SIGagronly" {
+				** fill dashboard matrix, with originally significant [R=s] (insignificant [R=n]) rows and columns C=1, ..., n of the dashboard identified by cond_RC
+				if `cond_n1' {
+					if (RF2_SIGagr_sigdef_`sfx_n'!=. & `sigdigits_ra'<`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_n'!=. & `studypooling'==1) {  
+						local y`case_n'x1	`"  "`: display "{it:p}{&le}{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
+					}
+					else {
+						local y`case_n'x1  	`"  	 																	    "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_n''"  "'
+					}							
+				}
+				if `cond_n3' {
+					if "`ivadjust'"=="0" {
+						if `signum_ra'>5  {
+								local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"  		"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							if "`customindicators'"=="SIGswitch" {
+								local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "%" '"         "`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"      										"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'
+							}
 						}
-						if RF2_SIGagr_sigdef_`sfx_s'==. {
-							local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:tF}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if `signum_ra'<=5  {
+								local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'				
+							if "`customindicators'"=="SIGswitch" {
+								local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"											"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '"  "'			
+							}
 						}
 					}
-					if `signum_ra'==5 {
-						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
-							local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'	
+					if "`ivadjust'"!="0" {
+						if `signum_ra'>5 {
+								local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:`ivadjust'}: "  `=RF2_SIGagr_05iva_`sfx_n'' "%)" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							if "`customindicators'"=="SIGswitch" { 
+								local y`case_n'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_n'' "% ({it:`ivadjust'}: "  `=RF2_SIGagr_05iva_`sfx_n'' "%)" '"   	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	
+							}
 						}
-						if RF2_SIGagr_sigdef_`sfx_s'==. {
-							local y`case_s'x3	`" 																				"`: display                              "{it:tF}-adjusted {it:p}: "  `=RF2_SIGagr_05tF_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+						if `signum_ra'<=5 & `signum_ra'>1 {
+								local y`case_n'x3	`" "`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_05iva_`sfx_n'' "%" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							if "`customindicators'"=="SIGswitch" {
+								local y`case_n'x3	`" "`: display                             	 			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_05iva_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	 
+							}
+						}
+						if `signum_ra'==1 {
+								local y`case_n'x3	`" "`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_01iva_`sfx_n'' "%" '" 	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'
+							if "`customindicators'"=="SIGswitch" {
+								local y`case_n'x3	`" "`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_01iva_`sfx_n'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" 	"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '" "'	 
+							}
 						}
 					}
 				}
-				if `tFinclude'!=1 {
-					if `signum_ra'!=5 {
-						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
-							local y`case_s'x3	`" 	"`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
-						}
-						if RF2_SIGagr_sigdef_`sfx_s'==. {
-							local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
-						}
+
+				if `cond_s1' {
+					if "`customindicators'"=="default" {
+						local y`case_s'x1 	`" "`: display "{&beta} in CI({&beta}{sup:o}): "  `=RF2_ESagr_`sfx_s'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_s''"  "'
 					}
-					if `signum_ra'==5 {
-						if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {
-							local y`case_s'x3	`" "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"																												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'  	
-						}
-						if RF2_SIGagr_sigdef_`sfx_s'==. {
-							local y`case_s'x3	`" 																																															"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
-						}
+					if "`customindicators'"=="SIGswitch" {
+						local y`case_s'x1 	`" "`: display "{&beta} in CI({&beta}{sup:o}): "  `=RF2_ESagr_`sfx_s'' "%" '"	"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_nsig_`sfx_s''"    "`: display "low |{&beta}|: " %3.0f RF2_SIGsw_btonsig_`sfx_s' "%;  high se: " %3.0f RF2_SIGsw_setonsig_`sfx_s' "%" '" "' 
 					}
 				}
+				if `cond_s3' {
+					if "`ivadjust'"!="0" {
+						if `signum_ra'>5 {
+							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  
+								local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:`ivadjust'}: "  `=RF2_SIGagr_05iva_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+							if RF2_SIGagr_sigdef_`sfx_s'==. {
+								local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "% ({it:`ivadjust'}: "  `=RF2_SIGagr_05iva_`sfx_s'' "%)" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+						}
+						if `signum_ra'<=5 & `signum_ra'>1 {
+							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
+								local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_05iva_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'	
+							}
+							if RF2_SIGagr_sigdef_`sfx_s'==. {
+								local y`case_s'x3	`" 																				"`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_05iva_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+						}
+						if `signum_ra'==1 {
+							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
+								local y`case_s'x3	`"  "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_01iva_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'	
+							}
+							if RF2_SIGagr_sigdef_`sfx_s'==. {
+								local y`case_s'x3	`" 																				"`: display                              			"{it:`ivadjust'}-adjusted: "  `=RF2_SIGagr_01iva_`sfx_s'' "%" '"  	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+						}
+					}
+					if "`ivadjust'"=="0" {
+						if `signum_ra'>5 {
+							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {  	
+								local y`case_s'x3	`" 	"`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+							if RF2_SIGagr_sigdef_`sfx_s'==. {
+								local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"                                              	"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+						}
+						if `signum_ra'<=5 {
+							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {
+								local y`case_s'x3	`" "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"																												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'  	
+							}
+							if RF2_SIGagr_sigdef_`sfx_s'==. {
+								local y`case_s'x3	`" 																																															"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+							}
+						}
+					}
+				}	
 			}	
-		}	
+		}
 
 
 *** Specifying location of indicators in dashboard depending on the number of results/ y-axis entries presented
@@ -3019,51 +3217,59 @@ qui {
 
 
 *** Display figure note
-		noi dis _newline(1)	"Robustness Dashboard stored under `filepath'/repframe_fig_dashboard_`ind_level'_`fileidentifier'.`graphfmt'"
-		noi dis _newline(1)	"Dashboard shows `notes_shares_shown' - `notes_spec' `notes_sigdef'"
-		noi dis _newline(2) "Legend:"
-		noi dis    			"`=ustrunescape("\u03B2")' = beta coefficient"
-		noi dis				"`=ustrunescape("\u03B2\u0303")' = median beta coefficient of reproducability or replicability analysis, measured as % deviation from original beta coefficient; generally, tildes indicate median values"
-		noi dis 			"CI = confidence interval"
+		noi dis as text _newline(1)	"Robustness Dashboard stored under `filepath'/repframe_fig_dashboard_`ind_level'_`fileidentifier'.`graphfmt'"
+		noi dis as text _newline(1)	"Dashboard shows `notes_shares_shown' - `notes_spec' `notes_sigdef'"
+		noi dis as text _newline(2) "Legend:"
+		noi dis as text    			"`=ustrunescape("\u03B2")' = beta coefficient"
+		noi dis	as text 			"`=ustrunescape("\u03B2\u0303")' = median beta coefficient of reproducability or replicability analysis, measured as % deviation from original beta coefficient; generally, tildes indicate median values"
+		noi dis as text 			"CI = confidence interval"
 		if `pval_provided'==1 {
-			noi dis             "{it:p} = {it:p}-value" 
+			noi dis as text         "{it:p} = {it:p}-value" 
 		}
 		else {
-			noi dis             "{it:p} = {it:p}-value (relies on two-sided test assuming an approximately normal distribution)" 
+			noi dis as text         "{it:p} = {it:p}-value (relies on two-sided test assuming an approximately normal distribution)" 
 		}
 		if `studypooling'==0 {
-			noi dis				"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original study {it:o}" 
+			noi dis	as text 		"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original study {it:o}" 
 		}
 		else {
-			noi dis				"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original studies {it:o}" 
+			noi dis	as text 		"{it:X}`=ustrunescape("\u0366")' = parameter {it:X} from original studies {it:o}" 
 		}
 		if `notes_sigdef_N'>0 { 
-			noi dis 			"`=ustrunescape("\u03B1")' = significance level"
+			noi dis as text 		"`=ustrunescape("\u03B1")' = significance level"
 		}
-		noi dis 			"{it:X}`=ustrunescape("\u0305")' = mean of parameter {it:X}"
-		noi dis 			"`=ustrunescape("\u0394")' = absolute deviation"
+		noi dis as text 			"{it:X}`=ustrunescape("\u0305")' = mean of parameter {it:X}"
+		noi dis as text 			"`=ustrunescape("\u0394")' = absolute deviation"
 		if `aggregation'==0 {
 			if beta_rel_orig_j!=. {
-				noi dis 		"[+/-xx%] = Percentage in squared brackets refers to the original beta coefficient, expressed as % deviation from original mean of the result"
+				noi dis as text 	"[+/-xx%] = Percentage in squared brackets refers to the original beta coefficient, expressed as % deviation from original mean of the result"
 			}
 		} 
 		else {
-			noi dis 			"|{it:X}| = absolute value of parameter {it:X}"
+			noi dis as text 		"|{it:X}| = absolute value of parameter {it:X}"
 			if `sigdigits_ra'==`sigdigits_oa' {
-				noi dis 	"`=ustrunescape("\u039A")' = significance agreement"  
+				noi dis as text 	"`=ustrunescape("\u039A")' = significance agreement"  
 			}
 			if `sigdigits_ra'!=`sigdigits_oa' {
-				noi dis 	"`=ustrunescape("\u039A")' = significance classification agreement"  
+				noi dis as text 	"`=ustrunescape("\u039A")' = significance classification agreement"  
 			}
 		}   
-		if "`extended'"!="none" {
-			noi dis 	   		   "low |`=ustrunescape("\u03B2")'| (high se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently low (high) to turn the overall estimate insignificant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"
-			noi dis    "Conversely, high |`=ustrunescape("\u03B2")'| (low se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently high (low) to turn the overall estimate significant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"   
+		if "`customindicators'"=="SIGswitch" {
+			noi dis as text 	   	"low |`=ustrunescape("\u03B2")'| (high se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently low (high) to turn the overall estimate insignificant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"
+			noi dis as text    		"Conversely, high |`=ustrunescape("\u03B2")'| (low se) refers to the share of analysis paths of the reproducability or replicability analysis where the revised absolute value of the beta coefficient (standard error) is sufficiently high (low) to turn the overall estimate significant at the `signum_ra'% level, keeping the standard error (beta coefficient) constant"   
 		}
-		if `tFinclude'==1 {
-			noi dis  		"{it:tF} indicates the share of statistically significant estimates in the reproducability or replicability analysis at the {it:tF}-adjusted 5% level, using the {it:tF} adjustment proposed by Lee et al. (2022, AER)"
+		if "`ivadjust'"=="tF" | "`ivadjust'"=="VtF" {
+			if `signum_ra'>1 { 
+				noi dis as text  	"{it:`ivadjust'} indicates the share of statistically significant estimates in the reproducability or replicability analysis at the {it:`ivadjust'}-adjusted 5% level, using the {it:`ivadjust'} adjustment proposed by Lee et al."
+			}
+			if `signum_ra'==1 {
+				noi dis as text  	"{it:`ivadjust'} indicates the share of statistically significant estimates in the reproducability or replicability analysis at the {it:`ivadjust'}-adjusted 1% level, using the {it:`ivadjust'} adjustment proposed by Lee et al."
+			}
 		}
-		noi dis 			"More details on indicator definitions under https://github.com/guntherbensch/repframe"
+		if "`ivadjust'"=="AR" {
+			noi dis as text   		"{it:`ivadjust'} indicates the share of statistically significant estimates in the reproducability or replicability analysis when robustness analyses apply weak-IV robust Anderson-Rubin {it:p}-values."
+		}
+		noi dis as text 			"More details on indicator definitions under https://github.com/guntherbensch/repframe"
 	}
 	
 
@@ -3080,6 +3286,7 @@ qui {
 
 	use `data_j', clear
 	capture drop `signfirst'
+	capture drop pval_0`iva_level'iva_orig_j
 	drop RF2_* rany_*
 
 	if `studypooling'==0 {
@@ -3245,8 +3452,8 @@ qui {
 
 		export excel "`filepath'/repframe_tab_indicators_`ind_level'_`fileidentifier'.xlsx", firstrow(varlabels) replace
 	}
-	noi dis _newline(1)	"Reproducibility and Replicability Indicators table stored under `filepath'/repframe_tab_indicators_`ind_level'_`fileidentifier'.`tabfmt'"
-	noi dis _newline(2)
+	noi dis as text _newline(1)	"Reproducibility and Replicability Indicators table stored under `filepath'/repframe_tab_indicators_`ind_level'_`fileidentifier'.`tabfmt'"
+	noi dis as text _newline(2)
 	
 	use `inputdata', clear
 }	

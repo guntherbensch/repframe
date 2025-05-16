@@ -1,10 +1,10 @@
-v 1.6
+v 1.7
 d {bf:repframe}: A Stata package to calculate, tabulate and visualize Reproducibility and Replicability Indicators based on multiverse analyses.
 d After installation, see {bf:help repframe}.
 d
 d Requires: Stata version 14 or higher.
 d
-d This  version: 06 Dec 2024
+d This  version: 16 May 2025
 d First version: 17 Jan 2024
 d License: MIT
 d

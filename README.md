@@ -1,4 +1,4 @@
-# REPFRAME v1.6
+# REPFRAME v1.7
 
 This is a Stata package to calculate, tabulate and visualize Reproducibility and Replicability Indicators. These indicators compare estimates from a multiverse of analysis paths of a robustness analysis &mdash; whether it is a reproducibility or replicability analysis &mdash; to the original estimate to gauge the degree of reproducibility or replicability. The package includes two commands: `repframe`, the main command, and `repframe_gendata`, which generates a dataset used in the command's help file to show examples of how the command works.  
 
@@ -27,7 +27,7 @@ The `repframe` command applies a few default assumptions. Use the following opti
 <ins>Tests for statistical significance</ins>: The command applies two-sided *t*-tests to determine which *p*-values imply statistical significance. These tests may apply different significance levels to the original estimates (`siglevel_orig(#)`) and to the robustness estimates (`siglevel(#)`). If the related *p*-values retrieved via the option `pval(varname)` are based on one-sided tests, they must be multiplied by two to correspond to a two-sided test. If no information on *p*-values is available, the command derives the missing *p*-value information using the *t*-test formula. Depending on which additional information is available, this may be done based on *t*/*z*-scores (`zscore(varname)`), on standard errors (`se(varname)`) and degrees of freedom (`df(varname)`), or on standard errors assuming a normal distribution. Remember that the latter may not always be appropriate, for example with small samples or when estimations have few degrees of freedom because they account for survey sampling, e.g. via the Stata command `svy:`, or when *p*-values are derived using randomisation inference. Conversely, if input data on *p*-values is based on distributional assumptions other than normality, the formula may not accurately derive standard errors. Therefore, it is recommended to specify both the information on *p*-values and on standard errors, and to consider the implications if non-normality is assumed in either the original or robustness analysis. 
 
 > [!IMPORTANT]  
-> Replicators of the **Robustness Reproducibility in Economics(R<sup>2</sup>E)** project should always apply a 5% significance level to the robustness analysis, i.e. `siglevel(5)`.
+> Replicators of the **Robustness Reproducibility in Economics(R<sup>2</sup>E)** project should always apply a 5\% significance level to the robustness analysis, i.e. `siglevel(5)`.
 
 <ins>Units in which effect sizes are measured</ins>: The command assumes that effect sizes in the original study and in the robustness analysis are measured in the same unit. If this is not the case, for example because one is measured in log terms and the other is not, use the option `sameunits(varname)`. This option requires a numerical variable **varname** containing the observation-specific binary information on whether the two are measured in the same unit (1=yes) or not (0=no).
 
@@ -76,7 +76,7 @@ The following steps need to be taken:
 
 ## The Reproducibility and Replicability Indicators
 
-The *Reproducibility and Replicability Indicators table* and the *Robustness Dashboard* present two separate sets of indicators. These indicators are primarily designed as easily and intuitively interpretable metrics for robustness analyses. First of all, they are applicable to tests on robustness reproducibility, which asks to what extent results in original studies are robust to alternative plausible analytical decisions on the same data ([Dreber and Johannesson 2024](#references)). This makes it plausible to assume that the tests of robustness reproducibility and the original study measure exactly the same underlying effect size, with no heterogeneity and no difference in statistical power. 
+The *Reproducibility and Replicability Indicators table* and the *Robustness Dashboard* present two separate sets of indicators. These indicators are primarily designed as easily and intuitively interpretable metrics for robustness analyses. First of all, they are applicable to tests on robustness reproducibility, which asks to what extent results in original studies are robust to alternative plausible analytical decisions on the same data ([Dreber and Johannesson 2025](#references)). This makes it plausible to assume that the tests of robustness reproducibility and the original study measure exactly the same underlying effect size, with no heterogeneity and no difference in statistical power. 
 
 For tests of replicability using new data or alternative research designs, more sophisticated indicators are required to account for potential heterogeneity and differences in statistical power (cf. [Mathur and VanderWeele 2020](#references), [Pawel and Held 2022](#references)).
 
@@ -180,7 +180,7 @@ The same indicator is also calculated for statistically significant robustness a
 > *Interpretation*: An indicator $I´_{1j}$ of 30\% implies that 30\% of robustness analysis paths for result $j$ are statistically significant. Depending on which of the four sub-indicators of the *Robustness Dashboard* one is referring to, this refers to (i) statistically significant *or* insignificant original results and to (ii) original and robustness coefficients that share *or* do not share the same sign. For example, if $I´_{1j}$ is 30\% for results with the same sign and 3\% for results with opposite signs, the remaining 67\% of robustness analysis paths for this result are statistically insignificant. The significance levels applied to the original study and the robustness analysis are identical and correspond to the one defined in the robustness analysis.
 
 
-2. The **relative effect size indicator** differs from $I_{2j}$ from the *Reproducibility and Replicability Indicators table* in that it is only derived for robustness analysis paths that are (i) statistically significant and (ii) in the same direction as the original estimate. In addition, the indicator takes the median of the robustness coefficients instead of the mean, in order to be less sensitive to outliers. Furthermore, one is subtracted from the ratio, in order to underscore the relative nature of the indicator. A ratio of 2/5 thus turns into -3/5, and multiplied by 100 to -60\%.
+2. The **relative effect size indicator** differs from $I_{2j}$ from the *Reproducibility and Replicability Indicators table* in that it is only derived for robustness analysis paths that are (i) statistically significant and (ii) in the same direction as the original estimate. In addition, the indicator takes the median of the robustness coefficients instead of the mean, in order to be less sensitive to outliers. Furthermore, one is subtracted from the ratio, in order to underscore the relative nature of the indicator. A ratio of 2/5 thus turns into -3/5, and multiplied by 100 to -60\%. Just like $I_{2j}$, the indicator requires that effect sizes in the original and robustness analyses are measured in the same units. 
 
 $$ I´_{2j} = (\frac{median(\beta_i)} {\beta^{orig}_j} - 1) \times 100  \quad  \text{if } pval^{orig}_j \le \alpha \land pval_i \le \alpha \land \beta_i \times \beta^{orig}_j \ge 0 $$
 
@@ -199,7 +199,7 @@ $$ I´_{3j} = \frac{mean(\mid \beta_i - median(\beta_i) \mid)}  {\beta^{orig}_j}
 
 $$ I´_{3j}  \text{ not applicable otherwise} $$
 
-:point_right: This ratio indicator is intended to capture how the variation in coefficients of robustness analysis paths compares to the variation in original coefficients. The indicator complements $I´_{2j}$ focusing on the case of original and robustness analyses with estimates that are statistically significant and in the same direction. 
+:point_right: This ratio indicator is intended to capture how the variation in coefficients of robustness analysis paths compares to the size of the original coefficient. The indicator complements $I´_{2j}$ focusing on the case of original and robustness analyses with estimates that are statistically significant and in the same direction. 
 > *Interpretation*: An indicator $I´_{3j}$ of, for example, 10\% means that variation across robustness analysis paths for result $j$ is equivalent to 10\% of the original coefficient. 
 
 
@@ -257,8 +257,8 @@ In cases where the robustness analysis and original study or studies applied dif
 > *Interpretation*: An indicator $I´_{7}$ of 80\% implies that the classification into significant or insignificant in robustness analysis paths confirms the classification by original authors in 80\% when averaged over individual results (studies).  
 
 
-#### Extension of the Robustness Dashboard
-The *Robustness Dashboard* additionally includes the option `extended(string)` to show the following type of indicators in an extended set of indicators. 
+#### Extended set of Robustness Dashboard indicators 
+The *Robustness Dashboard* additionally includes the option `customindicators(string)` that allows showing the following type of indicators in an extended set of indicators. 
 
 8. & 9. The **significance switch indicators** include two sub-indicators for originally significant and insignificant results, respectively. For originally significant results, these indicators measure the share of robustness coefficients (standard errors) that are sufficiently small (large) to have turned the result insignificant when standard errors (coefficients) are held at their values in the original study. Whether absolute values of coefficients (standard errors) are sufficiently small (large) is determined based on the threshold values $\beta(tonsig)_j$ and $se(tonsig)_j$. The indicators require that effect sizes in the original and robustness analyses are measured in the same units.
 
@@ -274,6 +274,19 @@ $$ I´_{9j} = mean(\mathbb{I}(se_i  < se(tosig)_j)) \times 100   		\quad  \text{
 
 :point_right: These proportion indicators are intended to capture the drivers behind changes in statistical significance between original study and robustness analysis.
 > *Interpretation*: An indicator $I´_{8j}$ of, for example, 30\% for a result $j$ with an originally significant result, implies that 30\% of the robustness analysis paths that are statistically insignificant have coefficients that are sufficiently small for the robustness analysis path to be statistically insignificant even if the standard error would be identical to the one in the original study. The other (sub-)indicators can be interpreted analogously. 
+
+
+#### Weak-IV-robust inference adjustments in the Robustness Dashboard
+The *Robustness Dashboard* can be extended to incorporate adjustments that reflect robust hypothesis testing in the presence of weak instruments. Three approaches are supported, each allowing the dashboard to additionally provide an weak-IV-robust version of the *significance agreement indicator*.
+
+1. ***tF* adjustment**:
+Developed by [Lee, Moreira, and co-authors](#references), the *tF* approach adjusts conventional standard errors and *p*-values based on the first-stage *F*-statistic. The user must supply *F*-statistics for each specification via the `tFinput()` option. The adjustment applies a smooth correction factor to standard errors, improving inference under weak instruments relative to the standard 2SLS *t*-test.
+2. ***VtF* adjustment**:
+The *VtF* approach (also by [Lee et al.](#references)) requires the user to supply *VtF*-adjusted critical values, such as those obtained using the user-written *VtF* command in Stata ([link](https://irs.princeton.edu/davidlee-supplementVTF)). This is also done via the `tFinput()` option. Unlike *tF*, *VtF* does not yield adjusted standard errors or *p*-values. Instead, the dashboard uses the critical values to calculate a *VtF*-adjusted significance indicator at the 5\% or 1\% level.
+*VtF* leverages additional information &mdash; specifically, the empirical correlation between residuals from the 2SLS regression &mdash; making it more powerful than *tF*. It yields shorter confidence intervals and improves the likelihood of detecting true effects under weak instruments. When using this option, the dashboard expects that the provided critical values correspond to the 5\% level (if the applied significance level is above 1\%) or to the 1\% level (if the applied level equals 1\%).
+Both *tF* and *VtF* ensure correct test size but do not resolve the power asymmetry problem &mdash; the tendency of *t*-based IV inference to favour one direction of effect over the other under weak instruments. As emphasized by [Keane & Neal (2024)](#references), this can lead to misleading conclusions about the sign of the effect. In addition, both methods are only applicable to just-identified models with a single instrument.
+3. **Anderson–Rubin (AR) test**:
+The AR test provides a weak-IV-robust alternative that avoids power asymmetry and maintains valid inference regardless of instrument strength. The dashboard can incorporate AR *p*-values, which the user supplies via the `pval_ar()` option (e.g., extracted from the `weakiv` command in Stata). This method is particularly attractive in the single-instrument case, where the AR test has a known finite-sample distribution. However, AR-based inference is typically less powerful than that based on the *VtF* adjustment.
 
 
 #### The Dashboard output
@@ -309,6 +322,16 @@ The following table summarizes which indicators are included in the *Reproducibi
 
 ## Update log
 
+2025-05-16, v1.7:
+
+- Replace option `extended(string)` by `customindicators(string)` in order to additionally allow for a "skeleton" version of the *Robustness Dashboard* that only includes the bubbles with the statistical significance indicator, which can be called via `customindicators(SIGagronly)`.
+- Update how *Robustness Dashboard* can account for weak instruments:
+  - Replace option `iVF()` by `tFinput(string varname)` to allow for both *tF* and *VtF* adjustment as proposed by [Lee et al. (2022)](#references) and [Lee et al. (2023)](#references).
+  - Add option `pval_ar(varname)` to also allow for weak-IV adjustment following [Anderson and Rubin (1949)](#references). 
+  - If `aggregation(0)` and `studypooling(0)` and `tFinput(tF ...)` or `pval_ar()` being defined, add to the original estimate the t*F*- or AR-adjusted *p*-value in analysis path of original study.
+- Remove "0%" from dashboards generated with `aggregation(1)` when the value is not applicable &mdash; that is, when no results in that category exist, such as when no original estimates were significant or insignificant.
+- Fix minor bugs occurring with `studypooling(1)`.
+  
 2024-12-06, v1.6:
 
 - Include option `decisions()` that allows accounting for the analytical decisions taken; if option `decisions()` is defined, `repframe` creates a set of three complementary plots that show the contributions of individual decisions to deviations in indicator values.
@@ -332,7 +355,7 @@ The following table summarizes which indicators are included in the *Reproducibi
   -  rename dashboard to *Robustness Dashboard*, including the option `sensdash()`, which is now called `dashboard()`.
   -  correct calculation of the *effect size variation indicator* when `sameunits(variable==0)` and `orig_in_multiverse(1)` applies for any analysis path.
   -  correct calculation of the *indicator on non-agreement due to significance classification* when `aggregation(1)`.
-  -  remove slight inconsistency in rounding if sum of shares would exceed or fall below 100%.
+  -  remove slight inconsistency in rounding if sum of shares would exceed or fall below 100\%.
   -  adjust colouring of confirmatory and non-confirmatory results.
   -  extend *indicator on non-agreement due to significance classification* to situations in which an original study applied a less stringent classification of what constitutes a statistically significant result than the robustness analysis.
   -  show histogram with share of confirmatory results (${\kappa}$) and absolute values of effect sizes ($|{\beta}|$) at bottom of dashboard when `aggregation(1)`.
@@ -389,7 +412,15 @@ The following table summarizes which indicators are included in the *Reproducibi
 
 
 ## References
-Dreber, A. & Johanneson, M. (2024). A Framework for Evaluating Reproducibility and Replicability in Economics. *Economic Inquiry*. doi: [10.1111/ecin.13244](https://onlinelibrary.wiley.com/doi/full/10.1111/ecin.13244).
+Anderson, T. W., & Rubin, H. (1949). Estimation of the parameters of a single equation in a complete system of stochastic equations. *The Annals of Mathematical Statistics*, *20*(1), 46-63.
+
+Dreber, A. & Johanneson, M. (2025). A Framework for Evaluating Reproducibility and Replicability in Economics. *Economic Inquiry*, *63*(2), 338-356. doi: [10.1111/ecin.13244](https://onlinelibrary.wiley.com/doi/full/10.1111/ecin.13244).
+
+Keane, M. P. & Neal, T. (2024). A practical guide to weak instruments. *Annual Review of Economics*, *16*, 185-212.
+
+Lee, D. S., McCrary, J., Moreira, M. J., & Porter, J. (2022). Valid *t*-ratio Inference for IV. *American Economic Review*, *112*(10), 3260-3290.
+
+Lee, D. S., McCrary, J., Moreira, M. J., Porter, J. R., & Yap, L. (2023). What to do when you can't use '1.96' Confidence Intervals for IV. *National Bureau of Economic Research Working Paper No. w31893*.
 
 Mathur, M. B., & VanderWeele, T. J. (2020). New statistical metrics for multisite replication projects. *Journal of the Royal Statistical Society Series A: Statistics in Society*, *183*(3), 1145-1166.
 

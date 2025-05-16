@@ -35,7 +35,12 @@ program define repframe_gendata
 			
 	syntax , STUDYPOOLing(numlist max=1 integer) 
 	
-	ssc install estout
+	*** use of estadd command requires estout package
+	capture which esttab
+	if _rc == 111 {
+		dis "Install estout"
+		ssc install estout, replace
+	}
 
 	qui {
 		if `studypooling'==0 {
