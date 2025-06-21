@@ -1,4 +1,4 @@
-*! version 1.7  16may2025 Gunther Bensch
+*! version 1.7.1  21jun2025 Gunther Bensch
 * remember to also keep -local repframe_vs- updated at the beginning of PART 1
 
 /*
@@ -83,7 +83,7 @@ DASHboard(numlist max=1 integer >=0 <=1)  vshortref_orig(string)  customindicato
 qui {
 
 *** Record the version of the repframe package
-	local repframe_vs  "version 1.7  16may2025"
+	local repframe_vs  "version 1.7.1  21jun2025"
 
 *** Preserve initial dataset 
 	tempfile inputdata   // -tempfile- used instead of command -preserve- because -repframe- would require multiple -preserve- (which is not possible) as different datasets will be used for the table of Indicators and for the Robustness Dashboard
@@ -758,72 +758,72 @@ qui {
 			** case 1 - 3: weak-IV adjustment
 			** case 1, siglevel>5%: add SIGagr for 5% and 5% weak-IV adjusted (be it tF,VtF, or AR) 	
 			if `signum_ra'>5 {
-				local RF2_SIGagr_0x        			RF2_SIGagr_05        		RF2_SIGagr_05iva
-				local RF2_SIGagr_0x_j      			RF2_SIGagr_05_j      		RF2_SIGagr_05iva_j
-				local RF2_SIGagr_0x_osig    		RF2_SIGagr_05_osig 			RF2_SIGagr_05iva_osig
-				local RF2_SIGagr_0x_onsig    		RF2_SIGagr_05_onsig 		RF2_SIGagr_05iva_onsig
+				local RF2_SIGagr_xx        			RF2_SIGagr_05        		RF2_SIGagr_05iva
+				local RF2_SIGagr_xx_j      			RF2_SIGagr_05_j      		RF2_SIGagr_05iva_j
+				local RF2_SIGagr_xx_osig    		RF2_SIGagr_05_osig 			RF2_SIGagr_05iva_osig
+				local RF2_SIGagr_xx_onsig    		RF2_SIGagr_05_onsig 		RF2_SIGagr_05iva_onsig
 
 				// for pooled results (*_all), the dashboard considers - for simplicity - only AR p-values, not the (V)tF-adjusted values
 				if "`ivadjust'"=="AR" {
-					local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05iva_osig_ra_all
-					local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05iva_onsig_ra_all
+					local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	RF2_SIGagr_05iva_osig_ra_all
+					local RF2_SIGagr_xx_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all 	RF2_SIGagr_05iva_onsig_ra_all
 				}
 				else {
-					local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	
-					local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all	
+					local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_05_osig_ra_all 	
+					local RF2_SIGagr_xx_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all	
 				}
 			}
 			** case 2, siglevel 5%>=X>1%: SIGagr for X% already shown in bubble, only add SIGagr for 5% weak-IV adjusted (be it tF,VtF, or AR) 
 			if `signum_ra'<=5 & `signum_ra'>1  {
-				local RF2_SIGagr_0x       										RF2_SIGagr_05iva
-				local RF2_SIGagr_0x_j      										RF2_SIGagr_05iva_j
-				local RF2_SIGagr_0x_osig    									RF2_SIGagr_05iva_osig
-				local RF2_SIGagr_0x_onsig    									RF2_SIGagr_05iva_onsig
+				local RF2_SIGagr_xx       			RF2_SIGagr_10				RF2_SIGagr_05iva
+				local RF2_SIGagr_xx_j      			RF2_SIGagr_10_j				RF2_SIGagr_05iva_j
+				local RF2_SIGagr_xx_osig    		RF2_SIGagr_10_osig			RF2_SIGagr_05iva_osig
+				local RF2_SIGagr_xx_onsig    		RF2_SIGagr_10_onsig			RF2_SIGagr_05iva_onsig
 
 				if "`ivadjust'"=="AR" {
-					local RF2_SIGagr_0x_osig_ra_all 								RF2_SIGagr_05iva_osig_ra_all
-					local RF2_SIGagr_0x_onsig_ra_all								RF2_SIGagr_05iva_onsig_ra_all
+					local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_10_osig_ra_all	RF2_SIGagr_05iva_osig_ra_all
+					local RF2_SIGagr_xx_onsig_ra_all	RF2_SIGagr_10_onsig_ra_all	RF2_SIGagr_05iva_onsig_ra_all
 				}
 				else {
-					local RF2_SIGagr_0x_osig_ra_all 								
-					local RF2_SIGagr_0x_onsig_ra_all 								
+					local RF2_SIGagr_xx_osig_ra_all 								
+					local RF2_SIGagr_xx_onsig_ra_all 								
 				}
 			}
 			** case 3, siglevel=1%: SIGagr for 1% already shown in bubble, only add SIGagr for 1% weak-IV adjusted (be it tF,VtF, or AR)   
 			if `signum_ra'==1  {
-				local RF2_SIGagr_0x       										RF2_SIGagr_01iva
-				local RF2_SIGagr_0x_j      										RF2_SIGagr_01iva_j
-				local RF2_SIGagr_0x_osig    									RF2_SIGagr_01iva_osig
-				local RF2_SIGagr_0x_onsig    									RF2_SIGagr_01iva_onsig
+				local RF2_SIGagr_xx       			RF2_SIGagr_10				RF2_SIGagr_01iva
+				local RF2_SIGagr_xx_j      			RF2_SIGagr_10_j				RF2_SIGagr_01iva_j
+				local RF2_SIGagr_xx_osig    		RF2_SIGagr_10_osig			RF2_SIGagr_01iva_osig
+				local RF2_SIGagr_xx_onsig    		RF2_SIGagr_10_onsig			RF2_SIGagr_01iva_onsig
 
 				if "`ivadjust'"=="AR" {
-					local RF2_SIGagr_0x_osig_ra_all 								RF2_SIGagr_01iva_osig_ra_all
-					local RF2_SIGagr_0x_onsig_ra_all								RF2_SIGagr_01iva_onsig_ra_all
+					local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_10_osig_ra_all	RF2_SIGagr_01iva_osig_ra_all
+					local RF2_SIGagr_xx_onsig_ra_all	RF2_SIGagr_10_onsig_ra_all	RF2_SIGagr_01iva_onsig_ra_all
 				}
 				else {
-					local RF2_SIGagr_0x_osig_ra_all 								
-					local RF2_SIGagr_0x_onsig_ra_all 								
+					local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_10_osig_ra_all								
+					local RF2_SIGagr_xx_onsig_ra_all 	RF2_SIGagr_10_onsig_ra_all							
 				}
 			}
 		}
 		** case 4 - 5: no weak-IV adjustment
 		** case 4, siglevel>5%: add SIGagr for 5%, only when siglevel>5%
 		if "`ivadjust'"=="0" & `signum_ra'>5 {
-			local RF2_SIGagr_0x        			RF2_SIGagr_05
-			local RF2_SIGagr_0x_j      			RF2_SIGagr_05_j
-			local RF2_SIGagr_0x_osig   			RF2_SIGagr_05_osig
-			local RF2_SIGagr_0x_onsig  			RF2_SIGagr_05_onsig
-			local RF2_SIGagr_0x_osig_ra_all 	RF2_SIGagr_05_osig_ra_all
-			local RF2_SIGagr_0x_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all
+			local RF2_SIGagr_xx        			RF2_SIGagr_05
+			local RF2_SIGagr_xx_j      			RF2_SIGagr_05_j
+			local RF2_SIGagr_xx_osig   			RF2_SIGagr_05_osig
+			local RF2_SIGagr_xx_onsig  			RF2_SIGagr_05_onsig
+			local RF2_SIGagr_xx_osig_ra_all 	RF2_SIGagr_05_osig_ra_all
+			local RF2_SIGagr_xx_onsig_ra_all 	RF2_SIGagr_05_onsig_ra_all
 		}
 		** case 5, siglevel<=5% OR pooled study data without RF2_SIGagr_05_osig_ra_all: no additional statistics
 		if ("`ivadjust'"=="0" & `signum_ra'<=5) | `check_05_osig_all'==0 {
-			local RF2_SIGagr_0x        
-			local RF2_SIGagr_0x_j      
-			local RF2_SIGagr_0x_osig
-			local RF2_SIGagr_0x_onsig    
-			local RF2_SIGagr_0x_osig_ra_all
-			local RF2_SIGagr_0x_onsig_ra_all
+			local RF2_SIGagr_xx        			RF2_SIGagr_10
+			local RF2_SIGagr_xx_j      			RF2_SIGagr_10_j
+			local RF2_SIGagr_xx_osig			RF2_SIGagr_10_osig
+			local RF2_SIGagr_xx_onsig    		RF2_SIGagr_10_onsig
+			local RF2_SIGagr_xx_osig_ra_all		RF2_SIGagr_10_osig_ra_all
+			local RF2_SIGagr_xx_onsig_ra_all	RF2_SIGagr_10_onsig_ra_all
 		}
 	}
 
@@ -1025,11 +1025,11 @@ qui {
 		local RF_list_nosfx  	`RF_list_nosfx'  RF_robratio_A RF_robratio_B RF_pooledH_A RF_pooledH_B
 	}
 	
-	local RF2_list_j 			RF2_SIGagr_j 		  	`RF2_SIGagr_0x_j' 			 RF2_SIGagr_ndir_j  			RF2_ESrel_j           RF2_ESvar_j 			RF2_SIGvar_nsig_j   		 RF2_SIGvar_sig_j  				RF2_ESagr_j				RF2_SIGagr_sigdef_j 	       RF2_SIGcfm_oas_j 		   RF2_SIGcfm_oan_j  								    	RF2_SIGsw_btonsig_j 			RF2_SIGsw_btosig_j  			RF2_SIGsw_setonsig_j 	RF2_SIGsw_setosig_j      
-	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_0x_osig_ra_all'  RF2_SIGagr_ndir_osig_ra_all    RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all									RF2_ESagr_osig_ra_all   RF2_SIGagr_sigdef_osig_ra_all  RF2_SIGcfm_oas_osig_ra_all  RF2_SIGcfm_oan_osig_ra_all  RF2_SIGcfm_uni_osig_ra_all	RF2_SIGsw_btonsig_osig_ra_all 									RF2_SIGsw_setonsig_osig_ra_all 
-	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_0x_onsig_ra_all' RF2_SIGagr_ndir_onsig_ra_all   											RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all							RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all  								RF2_SIGsw_btosig_onsig_ra_all 							RF2_SIGsw_setosig_onsig_ra_all 
-	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_0x' RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                 RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan  RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
-	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_0x' RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig  RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan             RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
+	local RF2_list_j 			RF2_SIGagr_j 		  	`RF2_SIGagr_xx_j' 			 RF2_SIGagr_ndir_j  			RF2_ESrel_j           RF2_ESvar_j 			RF2_SIGvar_nsig_j   		 RF2_SIGvar_sig_j  				RF2_ESagr_j				RF2_SIGagr_sigdef_j 	       RF2_SIGcfm_oas_j 		   RF2_SIGcfm_oan_j  								    	RF2_SIGsw_btonsig_j 			RF2_SIGsw_btosig_j  			RF2_SIGsw_setonsig_j 	RF2_SIGsw_setosig_j      
+	local RF2_list_osig_ra_k	RF2_SIGagr_osig_ra_all  `RF2_SIGagr_xx_osig_ra_all'  RF2_SIGagr_ndir_osig_ra_all    RF2_ESrel_osig_ra_all RF2_ESvar_osig_ra_all RF2_SIGvar_nsig_osig_ra_all									RF2_ESagr_osig_ra_all   RF2_SIGagr_sigdef_osig_ra_all  RF2_SIGcfm_oas_osig_ra_all  RF2_SIGcfm_oan_osig_ra_all  RF2_SIGcfm_uni_osig_ra_all	RF2_SIGsw_btonsig_osig_ra_all 									RF2_SIGsw_setonsig_osig_ra_all 
+	local RF2_list_onsig_ra_k	RF2_SIGagr_onsig_ra_all `RF2_SIGagr_xx_onsig_ra_all' RF2_SIGagr_ndir_onsig_ra_all   											RF2_SIGvar_nsig_onsig_ra_all RF2_SIGvar_sig_onsig_ra_all							RF2_SIGagr_sigdef_onsig_ra_all RF2_SIGcfm_oas_onsig_ra_all RF2_SIGcfm_oan_onsig_ra_all RF2_SIGcfm_uni_onsig_ra_all  								RF2_SIGsw_btosig_onsig_ra_all 							RF2_SIGsw_setosig_onsig_ra_all 
+	local RF2_osig_list_nosfx 	RF2_SIGagr `RF2_SIGagr_xx' RF2_SIGagr_ndir  RF2_ESrel RF2_ESvar  RF2_SIGvar_nsig                 RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan  RF2_ESagr  RF2_SIGsw_btonsig RF2_SIGsw_setonsig 		 	 
+	local RF2_onsig_list_nosfx	RF2_SIGagr `RF2_SIGagr_xx' RF2_SIGagr_ndir                       RF2_SIGvar_nsig RF2_SIGvar_sig  RF2_SIGagr_sigdef RF2_SIGcfm_uni RF2_SIGcfm_oas RF2_SIGcfm_oan             RF2_SIGsw_btosig  RF2_SIGsw_setosig  			 					
 
 
 	if `studypooling'==0 {
@@ -1086,7 +1086,11 @@ qui {
 						 gen x_RF2_SIGagr_05_i		= (pval_i<0.05  & beta_dir_i==beta_orig_dir_j)*100	 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1
 		bysort mainvar: egen   RF2_SIGagr_05_j  	= mean(x_RF2_SIGagr_05_i)
 		}
-
+		if `signum_ra'!=10  {
+						 gen x_RF2_SIGagr_10_i		= (pval_i<0.10  & beta_dir_i==beta_orig_dir_j)*100	 				if beta2_orig_j==. & beta2_i==. & origpath_i!=1
+		bysort mainvar: egen   RF2_SIGagr_10_j  	= mean(x_RF2_SIGagr_10_i)
+		}
+		
 			// - opposite direction -
 			// not for beta2_orig_j==1 | beta2_i==1
 					     gen x_RF2_SIGagr_ndir_i	= (pval_i<=0.`sigdigits_ra' ///
@@ -2462,6 +2466,11 @@ qui {
 			label var RF2_SIGagr_05_`unit'	"(RF1') Significance agreement (5% level)`label_`unit''"
 		}
 	}
+	if `signum_ra'!=10 {
+		foreach unit in j osig_ra_all onsig_ra_all {
+			label var RF2_SIGagr_10_`unit'	"(RF1') Significance agreement (10% level)`label_`unit''"
+		}
+	}
 	if "`ivadjust'"=="tF" | "`ivadjust'"=="AR"  {
 		foreach unit in j {
 			label var pval_0`iva_level'iva_orig_`unit' "weak-IV adjusted p-value in analysis path of original study (either tF or AR)`label_`unit''"
@@ -2740,7 +2749,7 @@ qui {
 			for num 1/3: replace x_share_1X  = 0 											if dashbrd_y==1 & dashbrd_x==X & rany_osig_ra_all==0 & x_share_1X==.			// replace missing by zero if none of the original estimates was sig
 			for num 1/3: replace x_share_2X  = 0 											if dashbrd_y==2 & dashbrd_x==X & rany_osig_ra_all==1 & x_share_2X==.   		// replace missing by zero if all of the original estimates were sig								
 			 
-			foreach styper in `RF2_SIGagr_0x' {
+			foreach styper in `RF2_SIGagr_xx' {
 				replace `styper'_onsig_ra_all 	= `styper'_onsig_ra_all  // top right  (insig orig & sig rev)
 				replace `styper'_osig_ra_all   = `styper'_osig_ra_all    // bottom right (sig orig & sig rev)
 			}
@@ -2866,12 +2875,12 @@ qui {
 
 *** Further rounding of indicators for presentation in the dashboard
 		if `aggregation'==0 {			
-			foreach rI in  beta_rel_orig_j   RF2_ESagr_j    `RF2_SIGagr_j' 		   `RF2_SIGagr_0x_j'      RF2_ESrel_j 	 RF2_ESvar_j {
+			foreach rI in  beta_rel_orig_j   RF2_ESagr_j    `RF2_SIGagr_j' 		   `RF2_SIGagr_xx_j'      RF2_ESrel_j 	 RF2_ESvar_j {
 				for num 1/`yset_n': replace `rI'X = round(`rI'X)
 			}
 		}
 		else {			
-			foreach rI in                    RF2_ESagr_osig `RF2_SIGagr_0x_osig'   `RF2_SIGagr_0x_onsig'  RF2_ESrel_osig RF2_ESvar_osig {
+			foreach rI in                    RF2_ESagr_osig `RF2_SIGagr_xx_osig'   `RF2_SIGagr_xx_onsig'  RF2_ESrel_osig RF2_ESvar_osig {
 				replace   `rI'_ra_all = round(`rI'_ra_all)		
 			}
 		}
@@ -2989,7 +2998,7 @@ qui {
 				}
 			}
 
-			// if basic dashboard, add sig.agreement indicator for 5% level if siglevel(>5) below main indicator in bubble
+			// if basic dashboard, add sig. agreement indicator for 5% level if siglevel(>5) below main indicator in bubble
 			if "`customindicators'"=="SIGagronly" {
 				if `signum_ra'>5  {
 					if `cond_n3' {
@@ -2997,6 +3006,14 @@ qui {
 					}
 					if `cond_s3' {
 						local y`case_s'x3	`" "`: display "{it:p}{&le}0.05: "  `=RF2_SIGagr_05_`sfx_s'' "%" '"  "'
+					}
+				}
+				if `signum_ra'==5  {
+					if `cond_n3' {
+						local y`case_n'x3	`" "`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_n'' "%" '"  "'
+					}
+					if `cond_s3' {
+						local y`case_s'x3	`" "`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_s'' "%" '"  "'
 					}
 				}
 			}
@@ -3021,9 +3038,9 @@ qui {
 							}
 						}
 						if `signum_ra'<=5  {
-								local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'				
+								local y`case_n'x3  	`" "`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_n'' "%" '"			"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''" "'				
 							if "`customindicators'"=="SIGswitch" {
-								local y`case_n'x3  	`"        																"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"											"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '"  "'			
+								local y`case_n'x3  	`" "`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_n'' "%" '"			"`: display "`=ustrunescape("\u0394\u0305\u0070")': " %3.2f RF2_SIGvar_sig_`sfx_n''"											"`: display "high |{&beta}|: " %3.0f RF2_SIGsw_btosig_`sfx_n' "%;  low se: " %3.0f RF2_SIGsw_setosig_`sfx_n' "%" '"  "'			
 							}
 						}
 					}
@@ -3095,10 +3112,10 @@ qui {
 						}
 						if `signum_ra'<=5 {
 							if (RF2_SIGagr_sigdef_`sfx_s'!=. & `sigdigits_ra'>`sigdigits_oa' & `studypooling'==0) | (RF2_SIGagr_sigdef_`sfx_s'!=. & `studypooling'==1) {
-								local y`case_s'x3	`" "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"																												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'  	
+								local y`case_s'x3	`" "`: display "{it:p}>{&alpha}{sup:o}: " `=RF2_SIGagr_sigdef_`sfx_s'' "%" '"	"`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_s'' "%" '"												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'  	
 							}
 							if RF2_SIGagr_sigdef_`sfx_s'==. {
-								local y`case_s'x3	`" 																																															"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
+								local y`case_s'x3	`" 																				"`: display "{it:p}{&le}0.10: "  `=RF2_SIGagr_10_`sfx_s'' "%" '"												"`: display "`=ustrunescape("\u03B2\u0303")': `sign_d_sig`m''" RF2_ESrel_`sfx_s' "% (`=ustrunescape("\u0394\u0305\u03B2\u0303")': " RF2_ESvar_`sfx_s' "%)" '"  "'
 							}
 						}
 					}

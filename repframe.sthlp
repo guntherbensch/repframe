@@ -287,7 +287,7 @@ of robustness tests and the original study. This option is meant to yield weak-I
 
 {phang}
 {opt signfirst(varname)} specifies the (uniform) variable {it:varname} that includes the share of first stages with wrong sign in a range between 0 and 1,
-if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár (2024)}). This parameter should only be used if the share is identical for all results.	
+if IV/2SLS estimations (cf. {help repframe##references:Angrist and Kolesár 2024}). This parameter should only be used if the share is identical for all results.	
 
 
 {marker examples}{...}
